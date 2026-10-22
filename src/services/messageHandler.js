@@ -77,7 +77,7 @@ class MessageHandler {
   async handleIncomingMessage(message, senderInfo, screen, datosReserva, datosPedido, pedidoStr) {
     try {
       const from = message.from;
-      if (isWithinBusinessHours()) {
+      if (!isWithinBusinessHours()) {
         if (message?.type === 'text') {
           const incomingMessage = message.text.body.toLowerCase().trim();
           const carta = this.cartaPorTexto(incomingMessage);
@@ -288,20 +288,6 @@ class MessageHandler {
     await whatsappService.sendInteractiveButtons(to, menuMessage, buttons);
   }
 
-  async botonSi(to) {
-    const menuMessage = "¿Deseas bebida🍹🍺 o postre? 🍨🧇";
-    const buttons = [
-      {
-        type: 'reply', reply: { id: 'si', title: 'Sí ✅' }
-      },
-      {
-        type: 'reply', reply: { id: 'option_1', title: 'Ver otra carta 📋' }
-      }
-    ];
-
-    await whatsappService.sendInteractiveButtons(to, menuMessage, buttons);
-  }
-
   async menuPedido(to) {
     const action = {
       name: "flow",
@@ -377,7 +363,7 @@ class MessageHandler {
       header: soloBebidasYPostres ? 'Bebidas y postres' : '¿Qué se te antoja hoy? 😋',
       body: soloBebidasYPostres
         ? 'Elige qué quieres agregar a tu pedido 👇'
-        : 'Elige una carta, agrega los productos al carrito 🛒 y envíanos tu pedido.\n\nPuedes combinar productos de todas las cartas en un mismo pedido.',
+        : 'Elige una carta, agrega los productos al carrito 🛒 y envíanos tu pedido.',
       footer: negocio.marcas,
       button: 'Ver cartas',
       sections: soloBebidasYPostres ? postresYBebidas : [...comida, ...postresYBebidas],
