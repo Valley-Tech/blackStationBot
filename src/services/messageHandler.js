@@ -77,7 +77,7 @@ class MessageHandler {
   async handleIncomingMessage(message, senderInfo, screen, datosReserva, datosPedido, pedidoStr) {
     try {
       const from = message.from;
-      if (isWithinBusinessHours()) {
+      if (!isWithinBusinessHours()) {
         if (message?.type === 'text') {
           const incomingMessage = message.text.body.toLowerCase().trim();
           const carta = this.cartaPorTexto(incomingMessage);
