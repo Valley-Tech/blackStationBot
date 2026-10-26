@@ -330,9 +330,9 @@ class MessageHandler {
       {
         title: 'La Estación Parrilla',
         rows: [
-          { id: 'cat:parrilla_asados', title: 'Asados y Picadas 🔥', description: 'Al carbón, al barril y picadas para compartir' },
-          { id: 'cat:parrilla_rapidas', title: 'Salchipapas y Burgers', description: 'Salchipapas, hamburguesas y hot dogs' },
-          { id: 'cat:parrilla_patacones', title: 'Patacones y Sándwiches', description: 'María casquito, patacones, desgranados y sándwiches' },
+          { id: 'cat:parrilla_asados', title: 'Asados y Picadas 🔥', description: 'Asados y picadas para compartir' },
+          { id: 'cat:parrilla_rapidas', title: 'Salchipapas y hamburguesas', description: 'Salchipapas, hamburguesas y perros calientes' },
+          { id: 'cat:parrilla_patacones', title: 'Patacones y Sándwiches', description: 'María casquito, patacones y sándwiches' },
         ],
       },
       {
@@ -363,7 +363,7 @@ class MessageHandler {
       header: soloBebidasYPostres ? 'Bebidas y postres' : '¿Qué se te antoja hoy? 😋',
       body: soloBebidasYPostres
         ? 'Elige qué quieres agregar a tu pedido 👇'
-        : 'Elige una carta, agrega los productos al carrito 🛒 y envíanos tu pedido.',
+        : 'Aquí 👇 puedes ver nuestras cartas!',
       footer: negocio.marcas,
       button: 'Ver cartas',
       sections: soloBebidasYPostres ? postresYBebidas : [...comida, ...postresYBebidas],
@@ -375,7 +375,7 @@ class MessageHandler {
     await whatsappService.sendListMessage(to, {
       header: "Black's Pizza 🍕",
       body: '¿De qué tamaño quieres tu pizza?',
-      footer: 'Todos los sabores en cada tamaño',
+      // footer: 'Todos los sabores en cada tamaño',
       button: 'Elegir tamaño',
       sections: [{
         title: 'Tamaños',
@@ -414,7 +414,7 @@ class MessageHandler {
         text: carta.header
       },
       body: {
-        text: "Toca *Ver artículos*, agrega lo que quieras al carrito 🛒 y envía tu pedido."
+        text: "Agrega lo que quieras al carrito 🛒 y envía tu pedido."
       },
       footer: {
         text: carta.marca
