@@ -331,7 +331,7 @@ class MessageHandler {
         title: 'La Estación Parrilla',
         rows: [
           { id: 'cat:parrilla_asados', title: 'Asados y Picadas 🔥', description: 'Asados y picadas para compartir' },
-          { id: 'cat:parrilla_rapidas', title: 'Salchipapas y hamburguesas', description: 'Salchipapas, hamburguesas y perros calientes' },
+          { id: 'cat:parrilla_rapidas', title: 'Salchipapas y burgers', description: 'Salchipapas, hamburguesas y perros calientes' },
           { id: 'cat:parrilla_patacones', title: 'Patacones y Sándwiches', description: 'María casquito, patacones y sándwiches' },
         ],
       },
