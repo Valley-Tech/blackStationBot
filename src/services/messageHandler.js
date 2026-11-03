@@ -467,7 +467,7 @@ class MessageHandler {
       if (key === 'pizzas') return this.menuPizzas(to);
       const enviado = await this.menuCarta(to, key);
       // Después de la comida, como en SamuelitoBot: "¿Deseas bebida o postre?".
-      if (enviado && /^(parrilla_|pizzas_|pizzeria_)/.test(key)) await this.botonSi(to);
+      if (enviado && /^(parrilla_|pizzas_|pizzeria_)/.test(key)) //await this.botonSi(to);
       return;
     }
     switch (option) {
