@@ -76,7 +76,7 @@ export default {
   FLOW_ID_ENCUESTA: process.env.FLOW_ID_ENCUESTA,
   NOTIFY_NUMBERS: (process.env.NOTIFY_NUMBERS || '').split(',').map((n) => n.replace(/\D/g, '')).filter(Boolean),
   DOMICILIO_VALOR: Number(process.env.DOMICILIO_VALOR ?? 3000),
-  HORA_APERTURA: process.env.HORA_APERTURA || '12:00',
+  HORA_APERTURA: process.env.HORA_APERTURA || '16:00',
   HORA_CIERRE: process.env.HORA_CIERRE || '23:00',
   LOGGRO_TABLE_ID: process.env.LOGGRO_TABLE_ID,               // mesa "Domicilios/WhatsApp" en Loggro
   LOGGRO_LOCATION_STOCK: process.env.LOGGRO_LOCATION_STOCK || '68f9ad7234a2d185b5e0bf68', // bodega General
