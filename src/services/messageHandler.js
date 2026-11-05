@@ -377,7 +377,7 @@ class MessageHandler {
       header: soloBebidasYPostres ? 'Bebidas y postres' : '¿Qué se te antoja hoy? 😋',
       body: soloBebidasYPostres
         ? 'Elige qué quieres agregar a tu pedido 👇'
-        : 'Elige una carta, agrega los productos al carrito 🛒 y envíanos tu pedido.\n\nPuedes combinar productos de todas las cartas en un mismo pedido.',
+        : 'Aquí👇 puedes ver nuestros menús',
       footer: negocio.marcas,
       button: 'Ver cartas',
       sections: soloBebidasYPostres ? postresYBebidas : [...comida, ...postresYBebidas],
