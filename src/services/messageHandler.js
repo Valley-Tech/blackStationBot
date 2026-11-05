@@ -8,7 +8,7 @@ import { logAxiosError } from './printDetailError.js';
 import { downloadImageFromMeta } from './httpRequest/sendToWhatsApp.js';
 import { uploadToPublicStorage } from './awsS3Service.js';
 import { sesion, tokenFlow } from './sesiones.js';
-import { product_names, CATALOGOS, areaPorId } from '../data/catalogo.js';
+import { product_names, CATALOGOS, areaPorId, grupoPorId, precios } from '../data/catalogo.js';
 import config from '../config/env.js';
 import negocio from '../config/negocio.js';
 
@@ -288,6 +288,20 @@ class MessageHandler {
     await whatsappService.sendInteractiveButtons(to, menuMessage, buttons);
   }
 
+  async botonSi(to) {
+    const menuMessage = "¿Deseas bebida🍹🍺 o postre? 🍨🧇";
+    const buttons = [
+      {
+        type: 'reply', reply: { id: 'si', title: 'Sí ✅' }
+      },
+      {
+        type: 'reply', reply: { id: 'option_1', title: 'Ver otra carta 📋' }
+      }
+    ];
+
+    await whatsappService.sendInteractiveButtons(to, menuMessage, buttons);
+  }
+
   async menuPedido(to) {
     const action = {
       name: "flow",
@@ -330,15 +344,15 @@ class MessageHandler {
       {
         title: 'La Estación Parrilla',
         rows: [
-          { id: 'cat:parrilla_asados', title: 'Asados y Picadas 🔥', description: 'Asados y picadas para compartir' },
-          { id: 'cat:parrilla_rapidas', title: 'Salchipapas y burgers', description: 'Salchipapas, hamburguesas y perros calientes' },
-          { id: 'cat:parrilla_patacones', title: 'Patacones y Sándwiches', description: 'María casquito, patacones y sándwiches' },
+          { id: 'cat:parrilla_asados', title: 'Asados y Picadas 🔥', description: 'Asados al carbón y picadas para compartir' },
+          { id: 'cat:parrilla_rapidas', title: 'Salchipapas y Burgers', description: 'Salchipapas, hamburguesas y hot dogs' },
+          { id: 'cat:parrilla_patacones', title: 'Patacones y Sándwiches', description: 'María casquito, patacones, desgranados y sándwiches' },
         ],
       },
       {
         title: "Black's Pizza",
         rows: [
-          { id: 'cat:pizzas', title: 'Pizzas 🍕', description: 'Elige el tamaño: 4, 6, 8 o 12 porciones' },
+          { id: 'cat:pizzas', title: 'Pizzas 🍕', description: config.VARIANTES_META ? 'Todos los sabores · el tamaño lo eliges en cada pizza' : 'Elige el tamaño: 4, 6, 8 o 12 porciones' },
           { id: 'cat:pizzeria_otros', title: 'Panzerottis y Lasañas', description: 'Panzerottis horneados y lasañas gratinadas' },
         ],
       },
@@ -348,8 +362,8 @@ class MessageHandler {
         title: 'Heladería Yellow',
         rows: [
           { id: 'cat:heladeria_helados', title: 'Helados y Postres 🍨', description: 'Helado a la plancha, copas, waffles y más' },
-          { id: 'cat:heladeria_malteadas', title: 'Malteadas y Frappés', description: 'Malteadas, frappés, smoothies y menú infantil' },
-          { id: 'cat:heladeria_jugos', title: 'Jugos y Micheladas 🍹', description: 'Jugos naturales, limonadas y micheladas' },
+          { id: 'cat:heladeria_malteadas', title: 'Malteadas y Frappés', description: config.VARIANTES_META ? 'Malteadas, frappés, smoothies · elige el sabor adentro' : 'Malteadas, frappés, smoothies y menú infantil' },
+          { id: 'cat:heladeria_jugos', title: 'Jugos y Micheladas 🍹', description: config.VARIANTES_META ? 'Jugos, limonadas y micheladas · elige el sabor adentro' : 'Jugos naturales, limonadas y micheladas' },
         ],
       },
       {
@@ -363,7 +377,7 @@ class MessageHandler {
       header: soloBebidasYPostres ? 'Bebidas y postres' : '¿Qué se te antoja hoy? 😋',
       body: soloBebidasYPostres
         ? 'Elige qué quieres agregar a tu pedido 👇'
-        : 'Aquí 👇 puedes ver nuestras cartas!',
+        : 'Elige una carta, agrega los productos al carrito 🛒 y envíanos tu pedido.\n\nPuedes combinar productos de todas las cartas en un mismo pedido.',
       footer: negocio.marcas,
       button: 'Ver cartas',
       sections: soloBebidasYPostres ? postresYBebidas : [...comida, ...postresYBebidas],
@@ -375,7 +389,7 @@ class MessageHandler {
     await whatsappService.sendListMessage(to, {
       header: "Black's Pizza 🍕",
       body: '¿De qué tamaño quieres tu pizza?',
-      // footer: 'Todos los sabores en cada tamaño',
+      footer: 'Todos los sabores en cada tamaño',
       button: 'Elegir tamaño',
       sections: [{
         title: 'Tamaños',
@@ -390,7 +404,7 @@ class MessageHandler {
   }
 
   /** Catálogo multiproducto (product_list) armado con los nombres de product_names. */
-  async menuCarta(to, key) {
+  async menuCarta(to, key, { header } = {}) {
     const carta = CATALOGOS[key];
     if (!carta) return false;
     if (!config.CATALOG_ID) {
@@ -398,23 +412,45 @@ class MessageHandler {
       await whatsappService.sendMessage(to, 'Nuestro catálogo se está actualizando 🙈. Escribe *carta* para recibir el menú en PDF o *asesor* para pedir con una persona.');
       return false;
     }
+    // Con variantes en Meta (VARIANTES_META=true) va un solo producto por grupo
+    // (p. ej. una "Pizza Hawaiana"): el tamaño o el sabor se elige dentro del producto.
+    // Representante de cada grupo: la variante más económica (WhatsApp muestra su precio en la lista).
+    const unoPorGrupo = (nombres) => {
+      if (!config.VARIANTES_META) return nombres;
+      const elegido = new Map(); // grupo → nombre
+      for (const n of nombres) {
+        const g = grupoPorId[product_names[n]];
+        if (g && (!elegido.has(g) || (precios[n] ?? 0) < (precios[elegido.get(g)] ?? 0))) elegido.set(g, n);
+      }
+      const usados = new Set();
+      return nombres.flatMap((n) => {
+        const g = grupoPorId[product_names[n]];
+        if (!g) return [n];
+        if (usados.has(g)) return [];
+        usados.add(g);
+        return [elegido.get(g)];
+      });
+    };
     const sections = carta.sections
       .map((s) => ({
         title: s.title,
-        product_items: s.productos
+        product_items: unoPorGrupo(s.productos)
           .map((nombre) => product_names[nombre])
           .filter(Boolean)
           .map((id) => ({ product_retailer_id: id })),
       }))
       .filter((s) => s.product_items.length);
+    const tieneVariantes = sections.some((s) => s.product_items.some((p) => grupoPorId[p.product_retailer_id]));
     const template = {
       type: "product_list",
       header: {
         type: "text",
-        text: carta.header
+        text: header ?? carta.header
       },
       body: {
-        text: "Agrega lo que quieras al carrito 🛒 y envía tu pedido."
+        text: config.VARIANTES_META && tieneVariantes
+          ? "Toca *Ver artículos* y luego un producto para elegir el sabor o el tamaño 👆 (cada opción con su foto y precio). Agrégalo al carrito 🛒 y envía tu pedido."
+          : "Toca *Ver artículos*, agrega lo que quieras al carrito 🛒 y envía tu pedido."
       },
       footer: {
         text: carta.marca
@@ -464,10 +500,16 @@ class MessageHandler {
     let response;
     if (typeof option === 'string' && option.startsWith('cat:')) {
       const key = option.slice(4);
-      if (key === 'pizzas') return this.menuPizzas(to);
+      if (key === 'pizzas') {
+        // Con variantes: un solo catálogo con todos los sabores (el tamaño se elige en cada pizza).
+        if (!config.VARIANTES_META) return this.menuPizzas(to);
+        const enviado = await this.menuCarta(to, 'pizzas_4', { header: "Pizzas Black's 🍕 · elige el tamaño en cada una" });
+        if (enviado) await this.botonSi(to);
+        return;
+      }
       const enviado = await this.menuCarta(to, key);
       // Después de la comida, como en SamuelitoBot: "¿Deseas bebida o postre?".
-      if (enviado && /^(parrilla_|pizzas_|pizzeria_)/.test(key)) //await this.botonSi(to);
+      if (enviado && /^(parrilla_|pizzas_|pizzeria_)/.test(key)) await this.botonSi(to);
       return;
     }
     switch (option) {

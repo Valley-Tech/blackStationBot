@@ -71,6 +71,7 @@ export const product_names = {
    - Carga masiva con `docs/catalogo-meta-la-estacion.csv`. Completa las columnas `link` (p. ej. la página del restaurante) e `image_link` (foto de cada producto), que Meta exige.
    - El **ID de contenido** de cada producto debe ser el ID de Loggro (columna `id`).
    - Conecta el catálogo al número de WhatsApp y copia el ID del catálogo en `CATALOG_ID`.
+   - El CSV trae **56 grupos de variantes** (pizzas por tamaño; hamburguesas, jugos, micheladas… por sabor, todos en el campo `size`). El bot muestra **una tarjeta por grupo** y el cliente elige la variante dentro del producto (`VARIANTES_META`, activo por defecto). Si cambias los grupos: `npm run grupos`. Ver `docs/VARIANTES-META.md`.
    - Si falta un solo producto de un catálogo, WhatsApp rechaza ese mensaje completo (#131009). Revisa con `npm run verificar` (con `CATALOG_ID` y `API_TOKEN` en el .env te lista los que faltan).
 2. **Flows** (WhatsApp Manager): copia los JSON de Pedido, Reserva y Encuesta de Samuelito (mismas pantallas y campos), endpoint `https://<bot>/flow`, publícalos y pon sus IDs en `FLOW_ID_PEDIDO`, `FLOW_ID_RESERVA`, `FLOW_ID_ENCUESTA`. Registra la clave pública en el número (`node scripts/clave-flow.mjs subir`).
 3. **Plantillas** (mismas de Samuelito, en la WABA de La Estación): `mensaje_nuevo_pedido`, `comprobante_pago` (6 variables, encabezado con imagen) y `confirmacion_reserva` (7 variables, encabezado con imagen).

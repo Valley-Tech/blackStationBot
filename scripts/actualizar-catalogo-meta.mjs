@@ -7,8 +7,9 @@
  *
  *   node scripts/actualizar-catalogo-meta.mjs                       → simulación (no envía nada)
  *   node scripts/actualizar-catalogo-meta.mjs --enviar              → aplica docs/actualizacion-variantes-meta.csv
- *   node scripts/actualizar-catalogo-meta.mjs --crear-faltantes --enviar
- *        → además crea los productos de docs/productos-faltantes-meta.csv (alitas, chicharrón…)
+ *   node scripts/actualizar-catalogo-meta.mjs --archivo actualizacion-panzerottis-meta.csv --enviar   → solo panzerottis
+ *   node scripts/actualizar-catalogo-meta.mjs --archivo revertir-panzerottis-meta.csv --vaciar --enviar
+ *        → los panzerottis vuelven a ser productos sueltos (sin "Custom_data:sabor")
  *
  * Variables (.env o Railway): CATALOG_ID y CATALOG_TOKEN (o API_TOKEN) con permiso
  * catalog_management sobre el catálogo (usuario del sistema del portafolio).
@@ -19,6 +20,9 @@ try { await import('dotenv/config'); } catch { /* sin dotenv */ }
 const args = process.argv.slice(2);
 const ENVIAR = args.includes('--enviar');
 const CREAR = args.includes('--crear-faltantes');
+// --vaciar: borra el atributo personalizado (additional_variant_attribute) enviándolo vacío.
+const VACIAR = args.includes('--vaciar');
+const ARCHIVO = args.includes('--archivo') ? args[args.indexOf('--archivo') + 1] : 'actualizacion-variantes-meta.csv';
 const CATALOG_ID = process.env.CATALOG_ID;
 const TOKEN = process.env.CATALOG_TOKEN || process.env.API_TOKEN;
 const VERSION = process.env.API_VERSION || 'v23.0';
@@ -42,10 +46,10 @@ function leerCsv(nombre) {
   return lineas.slice(1).map((l) => Object.fromEntries(partir(l).map((v, i) => [cab[i], v])));
 }
 
-const limpio = (o) => Object.fromEntries(Object.entries(o).filter(([, v]) => v !== '' && v != null));
+const limpio = (o) => Object.fromEntries(Object.entries(o).filter(([k, v]) => (v !== '' && v != null) || (VACIAR && k === 'additional_variant_attribute')));
 
-const requests = leerCsv('actualizacion-variantes-meta.csv').map((r) => ({ method: 'UPDATE', data: limpio(r) }));
-if (CREAR) for (const r of leerCsv('productos-faltantes-meta.csv')) requests.push({ method: 'CREATE', data: limpio(r) });
+const requests = leerCsv(ARCHIVO).map((r) => ({ method: 'UPDATE', data: limpio(r) }));
+if (CREAR && fs.existsSync(new URL('productos-faltantes-meta.csv', dir))) for (const r of leerCsv('productos-faltantes-meta.csv')) requests.push({ method: 'CREATE', data: limpio(r) });
 
 console.log(`${requests.filter((r) => r.method === 'UPDATE').length} productos a actualizar, ${requests.filter((r) => r.method === 'CREATE').length} a crear.`);
 console.log('Ejemplo:', JSON.stringify(requests[0]));

@@ -5,9 +5,9 @@
 import config from './env.js';
 
 export default {
-  nombre: 'La Estación Blacks',
+  nombre: 'La Estación Parrilla Bar',
   marcas: "La Estación Parrilla Bar · Black's Pizza · Heladería Yellow",
-  bienvenida: '*La Estación Blacks* 🍔🌭🍟🍕🥩🍨',
+  bienvenida: '*La Estación Parrilla Bar* 🔥🍖\n🍕 *Black\'s Pizza*  ·  🍨 *Heladería Yellow*',
 
   // Horario de atención del chatbot para pedidos (hora Colombia). ⚠️ confirmar.
   horario: { apertura: config.HORA_APERTURA, cierre: config.HORA_CIERRE },
@@ -23,7 +23,7 @@ export default {
   telefonos: { parrilla: '573224993245', pizzeria: '573113509246' },
 
   // Cuentas para transferencia. ⚠️ completar con las del restaurante.
-  cuentasBancarias: '🏦Cuentas bancarias:\n\n*Bancolombia Ahorros:* ⚠️ 70400023806 - *Jorge Ariza*',
+  cuentasBancarias: '🏦Cuentas bancarias:\n\n*Nequi:* ⚠️ por definir\n\n*Bancolombia Ahorros:* ⚠️ por definir',
 
   // Ubicación. ⚠️ completar coordenadas (Google Maps → clic derecho sobre el local → copiar) y dirección.
   ubicacion: { latitude: null, longitude: null, name: 'La Estación Parrilla Bar', address: '⚠️ Dirección por definir' },

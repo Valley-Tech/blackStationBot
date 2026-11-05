@@ -25,6 +25,7 @@ export const product_names = {
   "Punta Gorda": "690d20f6896aa57688e77c08",
   "Asado Mixto": "68f9b12adc8cd6ef3cca6c56",
   "Asado Trifásico": "68f9b17969ea0df0fa608b89",
+  // Asados al barril
   // Picadas
   "Picada 2 Personas": "68f9b599204fe26227456f18",
   "Picada 3 Personas": "68f9b599204fe26227456f1b",
@@ -274,10 +275,10 @@ export const product_names = {
   "Kola Personal": "690a9d4ac1ad1248fdb517e6",
   "Postobón Personal": "690a9e0e182ce89cb5ee7c6f",
   "Bacana": "690a9d0e97e31de265e28d6b",
-  "Cerveza Club Colombia": "690a9ca6d3db9293646eb3ea",
-  "Cerveza Póker": "690a9c3cfd05b8a13899ead8",
-  "Cerveza Águila Light": "690a9cd05ec7676b4106c3f4",
-  "Cerveza Coronita": "690a9c675c7b33c148b0f501",
+  "Club Colombia": "690a9ca6d3db9293646eb3ea",
+  "Póker": "690a9c3cfd05b8a13899ead8",
+  "Águila Light": "690a9cd05ec7676b4106c3f4",
+  "Coronita": "690a9c675c7b33c148b0f501",
   "Pony Malta 1 L": "690a9edcc61dbcc72775d6c2",
   "Coca-Cola 1.5 L": "690a9f09c1ad1248fdba6d73",
   "Cuatro 1.5 L": "690a9fc1c1ad1248fdbc56e7",
@@ -533,10 +534,10 @@ export const precios = {
   "Kola Personal": 4000,
   "Postobón Personal": 4000,
   "Bacana": 4500,
-  "Cerveza Club Colombia": 4500,
-  "Cerveza Póker": 4500,
-  "Cerveza Águila Light": 4500,
-  "Cerveza Coronita": 5000,
+  "Club Colombia": 4500,
+  "Póker": 4500,
+  "Águila Light": 4500,
+  "Coronita": 5000,
   "Pony Malta 1 L": 6000,
   "Coca-Cola 1.5 L": 8000,
   "Cuatro 1.5 L": 8000,
@@ -940,10 +941,10 @@ export const CATALOGOS = {
       { title: "Cervezas", productos: [
         "Cola y Pola",
         "Bacana",
-        "Cerveza Club Colombia",
-        "Cerveza Póker",
-        "Cerveza Águila Light",
-        "Cerveza Coronita",
+        "Club Colombia",
+        "Póker",
+        "Águila Light",
+        "Coronita",
       ] },
     ],
   },
@@ -1021,10 +1022,10 @@ export const AREAS_LOGGRO = {
     "Kola Personal",
     "Postobón Personal",
     "Bacana",
-    "Cerveza Club Colombia",
-    "Cerveza Póker",
-    "Cerveza Águila Light",
-    "Cerveza Coronita",
+    "Club Colombia",
+    "Póker",
+    "Águila Light",
+    "Coronita",
     "Pony Malta 1 L",
     "Coca-Cola 1.5 L",
     "Cuatro 1.5 L",
@@ -1115,3 +1116,541 @@ export const AREAS_LOGGRO = {
 export const areaPorId = Object.fromEntries(
   Object.entries(AREAS_LOGGRO).flatMap(([area, nombres]) => nombres.map((n) => [product_names[n], area]))
 );
+
+/**
+ * Variantes en el catálogo de Meta (item_group_id del CSV). Con VARIANTES_META activo
+ * (por defecto) el bot muestra UNA tarjeta por grupo en cada catálogo multiproducto y el
+ * cliente elige el sabor o el tamaño dentro del producto, con la foto de cada variante.
+ * Se regenera con: npm run grupos
+ */
+// <grupos-variantes> (generado por scripts/grupos-desde-csv.mjs a partir de catalogo-meta-la-estacion.csv; no editar a mano)
+/** ID de la variante → item_group_id del catálogo de Meta. */
+export const grupoPorId = {
+  "68f9b0464023c130e6c82db4": "BS-PECHUGA", // Pechuga Asada
+  "69333446f87b1fc7e017a9ed": "BS-CHULETA", // Chuleta Ahumada
+  "68f9b0e24023c130e6c88e80": "BS-CHULETA", // Chuleta de Cerdo
+  "68f9b0874023c130e6c8514e": "BS-PECHUGA", // Pechuga Gratinada
+  "68f9b12adc8cd6ef3cca6c56": "BS-ASADO", // Asado Mixto
+  "68f9b17969ea0df0fa608b89": "BS-ASADO", // Asado Trifásico
+  "68f9b599204fe26227456f18": "68f9b599204fe26227456f14", // Picada 2 Personas
+  "68f9b599204fe26227456f1b": "68f9b599204fe26227456f14", // Picada 3 Personas
+  "68f9b599204fe26227456f1e": "68f9b599204fe26227456f14", // Picada 4 Personas
+  "68f9b599204fe26227456f21": "68f9b599204fe26227456f14", // Picada 5 Personas
+  "68f9b599204fe26227456f24": "68f9b599204fe26227456f14", // Picada 6 Personas
+  "68f9b599204fe26227456f27": "68f9b599204fe26227456f14", // Picada Familiar
+  "68f9b301e9f5c7d7299d5f38": "BS-SALCHIPAPA", // Salchipapa Sencilla
+  "68f9b34eeed0d183fc4c41f0": "BS-SALCHIPAPA", // Salchipapa Mixta
+  "68f9b3ace9f5c7d7299d9dd4": "BS-SALCHIPAPA", // Salchipapa Ranchera
+  "68f9b3f9eed0d183fc4c6c8c": "BS-SALCHIPAPA", // Salchipapa Especial
+  "68f9b47ceed0d183fc4ca826": "BS-SALCHIPAPA", // Salchipapa Súper Estación
+  "68f9b62b69ea0df0fa62e7c2": "BS-HAMBURGUESA", // Hamburguesa Sencilla
+  "6901126ebf87d3a7996b3317": "BS-HAMBURGUESA", // Hamburguesa de Pollo
+  "690112a972a153ce084392f4": "BS-HAMBURGUESA", // Hamburguesa Ranchera
+  "68f9b6540a78886bbeba7b16": "BS-HAMBURGUESA", // Hamburguesa Doble Carne
+  "690112d844cd5e1f60d9f3c0": "BS-HAMBURGUESA", // Hamburguesa Mixta
+  "6901132a6fb60f5fbaa8b054": "BS-HAMBURGUESA", // Hamburguesa Estacionaria
+  "6901138e76964c0018aa9eb5": "BS-PERRO", // Perro Sencillo + Papas
+  "690113ccee6c4a4e9a132742": "BS-PERRO", // Choriperro
+  "6901140f6fc071bf5acfe879": "BS-PERRO", // Perro Ranchero
+  "69011469ee6c4a4e9a148c06": "BS-PERRO", // Perro Estacionario
+  "6901188a6fb60f5fbab5596f": "BS-MARIA-CASQUITO", // María Casquito Sencillo
+  "690118cf44cd5e1f60e7e19d": "BS-MARIA-CASQUITO", // María Casquito Especial
+  "690119276fb60f5fbab64530": "BS-PATACON-BURGER", // Patacón Burger Sencillo
+  "6901195872a153ce085348ff": "BS-PATACON-BURGER", // Patacón Burger de Pollo
+  "6901198c5e3e3b0cc8daa201": "BS-PATACON-BURGER", // Patacón Burger Ranchero
+  "69011af9541ff74a53fe6633": "BS-PATACON-RELLENO", // Patacón Relleno Sencillo
+  "69011a3f5e3e3b0cc8dba4ca": "BS-PATACON-BURGER", // Patacón Burger Doble Carne
+  "690119df72a153ce08543554": "BS-PATACON-BURGER", // Patacón Burger Mixto
+  "69011a8a541ff74a53fdb60e": "BS-PATACON-BURGER", // Patacón Burger Estacionario
+  "69011b2ee66c3e035de1469e": "BS-PATACON-RELLENO", // Patacón Relleno Especial
+  "69011b9f72a153ce08575893": "BS-DESGRANADO", // Desgranado Sencillo
+  "69011bdbe66c3e035de273ed": "BS-DESGRANADO", // Desgranado Especial
+  "69011c0fbf87d3a79980900a": "BS-DESGRANADO", // Desgranado Estacionario (2 personas)
+  "69011c4a6fc071bf5ae192cc": "BS-SANDWICH", // Sándwich Sencillo
+  "69011ccebf87d3a799822f02": "BS-SANDWICH", // Sándwich de Carne
+  "69011c98e66c3e035de39412": "BS-SANDWICH", // Sándwich de Pollo
+  "69011d10e66c3e035de49a3c": "BS-SANDWICH", // Sándwich Especial Estacionario
+  "6a91ba75433807bf410f6a0b": "6a91ba75433807bf410f69b7", // Pizza Hawaiana (4 porciones)
+  "6a91ba75433807bf410f6a0e": "6a91ba75433807bf410f69b7", // Pizza Hawaiana (6 porciones)
+  "6a91ba75433807bf410f6a11": "6a91ba75433807bf410f69b7", // Pizza Hawaiana (8 porciones)
+  "6a91ba75433807bf410f6a14": "6a91ba75433807bf410f69b7", // Pizza Hawaiana (12 porciones)
+  "6a91bb147c5637ef37a88c2e": "6a91bb147c5637ef37a88bda", // Pizza Hawaiana Chicken (4 porciones)
+  "6a91bb147c5637ef37a88c31": "6a91bb147c5637ef37a88bda", // Pizza Hawaiana Chicken (6 porciones)
+  "6a91bb147c5637ef37a88c34": "6a91bb147c5637ef37a88bda", // Pizza Hawaiana Chicken (8 porciones)
+  "6a91bb147c5637ef37a88c37": "6a91bb147c5637ef37a88bda", // Pizza Hawaiana Chicken (12 porciones)
+  "6a91bbf99f83fec18c5e8fdf": "6a91bbf99f83fec18c5e8f8b", // Pizza Queso y Bocadillo (4 porciones)
+  "6a91bbf99f83fec18c5e8fe2": "6a91bbf99f83fec18c5e8f8b", // Pizza Queso y Bocadillo (6 porciones)
+  "6a91bbf99f83fec18c5e8fe5": "6a91bbf99f83fec18c5e8f8b", // Pizza Queso y Bocadillo (8 porciones)
+  "6a91bbf99f83fec18c5e8fe8": "6a91bbf99f83fec18c5e8f8b", // Pizza Queso y Bocadillo (12 porciones)
+  "6a91bcc2433807bf41150f5f": "6a91bcc2433807bf41150f0b", // Pizza Jamón y Queso (4 porciones)
+  "6a91bcc2433807bf41150f62": "6a91bcc2433807bf41150f0b", // Pizza Jamón y Queso (6 porciones)
+  "6a91bcc2433807bf41150f65": "6a91bcc2433807bf41150f0b", // Pizza Jamón y Queso (8 porciones)
+  "6a91bcc2433807bf41150f68": "6a91bcc2433807bf41150f0b", // Pizza Jamón y Queso (12 porciones)
+  "6a91bd1e55b2f4a68fd2c718": "6a91bd1e55b2f4a68fd2c6c4", // Pizza Mexicana (4 porciones)
+  "6a91bd1e55b2f4a68fd2c71b": "6a91bd1e55b2f4a68fd2c6c4", // Pizza Mexicana (6 porciones)
+  "6a91bd1e55b2f4a68fd2c71e": "6a91bd1e55b2f4a68fd2c6c4", // Pizza Mexicana (8 porciones)
+  "6a91bd1e55b2f4a68fd2c721": "6a91bd1e55b2f4a68fd2c6c4", // Pizza Mexicana (12 porciones)
+  "6a91bd90a2cbc83f969bc84b": "6a91bd90a2cbc83f969bc7f7", // Pizza Pollo y Jamón (4 porciones)
+  "6a91bd90a2cbc83f969bc84e": "6a91bd90a2cbc83f969bc7f7", // Pizza Pollo y Jamón (6 porciones)
+  "6a91bd90a2cbc83f969bc851": "6a91bd90a2cbc83f969bc7f7", // Pizza Pollo y Jamón (8 porciones)
+  "6a91bd90a2cbc83f969bc854": "6a91bd90a2cbc83f969bc7f7", // Pizza Pollo y Jamón (12 porciones)
+  "6acacd187301e8fc6786c467": "6acacc71c2414a171f4691d6", // Pizza Pollo y Maíz (4 porciones)
+  "6acacd187301e8fc6786c46a": "6acacc71c2414a171f4691d6", // Pizza Pollo y Maíz (6 porciones)
+  "6acacd187301e8fc6786c46d": "6acacc71c2414a171f4691d6", // Pizza Pollo y Maíz (8 porciones)
+  "6acacd187301e8fc6786c470": "6acacc71c2414a171f4691d6", // Pizza Pollo y Maíz (12 porciones)
+  "6a91be3c55b2f4a68fd65bc2": "6a91be3c55b2f4a68fd65b6e", // Pizza Vegetariana (4 porciones)
+  "6a91be3c55b2f4a68fd65bc5": "6a91be3c55b2f4a68fd65b6e", // Pizza Vegetariana (6 porciones)
+  "6a91be3c55b2f4a68fd65bc8": "6a91be3c55b2f4a68fd65b6e", // Pizza Vegetariana (8 porciones)
+  "6a91be3c55b2f4a68fd65bcb": "6a91be3c55b2f4a68fd65b6e", // Pizza Vegetariana (12 porciones)
+  "6a91be9f0aa2e1a7c126bcd4": "6a91be9f0aa2e1a7c126bc80", // Pizza Napolitana (4 porciones)
+  "6a91be9f0aa2e1a7c126bcdf": "6a91be9f0aa2e1a7c126bc80", // Pizza Napolitana (6 porciones)
+  "6a91be9f0aa2e1a7c126bce4": "6a91be9f0aa2e1a7c126bc80", // Pizza Napolitana (8 porciones)
+  "6a91be9f0aa2e1a7c126bd57": "6a91be9f0aa2e1a7c126bc80", // Pizza Napolitana (12 porciones)
+  "6a91df4a85c9580175339544": "6a91bf3c85c9580175c7a65b", // Pizza de Salami (4 porciones)
+  "6a91df4a85c9580175339582": "6a91bf3c85c9580175c7a65b", // Pizza de Salami (6 porciones)
+  "6a91df4a85c95801753395f3": "6a91bf3c85c9580175c7a65b", // Pizza de Salami (8 porciones)
+  "6a91df4a85c9580175339636": "6a91bf3c85c9580175c7a65b", // Pizza de Salami (12 porciones)
+  "6a91dc83433807bf4179ae76": "6a91bf3c9f83fec18c6a1aef", // Pizza de Pepperoni (4 porciones)
+  "6a91dc83433807bf4179b18f": "6a91bf3c9f83fec18c6a1aef", // Pizza de Pepperoni (6 porciones)
+  "6a91dc83433807bf4179bf7a": "6a91bf3c9f83fec18c6a1aef", // Pizza de Pepperoni (8 porciones)
+  "6a91dc83433807bf4179bf7e": "6a91bf3c9f83fec18c6a1aef", // Pizza de Pepperoni (12 porciones)
+  "6a91dcf0ad28ba91520367ef": "6a91bf3ca2cbc83f96a252f5", // Pizza La Paisita (4 porciones)
+  "6a91dcf0ad28ba91520367f2": "6a91bf3ca2cbc83f96a252f5", // Pizza La Paisita (6 porciones)
+  "6a91dcf0ad28ba91520367f5": "6a91bf3ca2cbc83f96a252f5", // Pizza La Paisita (8 porciones)
+  "6a91dcf0ad28ba91520367f8": "6a91bf3ca2cbc83f96a252f5", // Pizza La Paisita (12 porciones)
+  "6a91dedd0e9cb0b00f5964d6": "6a91bf3c85c9580175c7a871", // Pizza Pollo y Tocineta (4 porciones)
+  "6a91dedd0e9cb0b00f5964d9": "6a91bf3c85c9580175c7a871", // Pizza Pollo y Tocineta (6 porciones)
+  "6a91dedd0e9cb0b00f5964dc": "6a91bf3c85c9580175c7a871", // Pizza Pollo y Tocineta (8 porciones)
+  "6a91dedd0e9cb0b00f5964df": "6a91bf3c85c9580175c7a871", // Pizza Pollo y Tocineta (12 porciones)
+  "6a91de807c5637ef371e4eca": "6a91bf3d7c5637ef37b5f101", // Pizza Toxi-Queso (4 porciones)
+  "6a91de807c5637ef371e4ece": "6a91bf3d7c5637ef37b5f101", // Pizza Toxi-Queso (6 porciones)
+  "6a91de807c5637ef371e4ed4": "6a91bf3d7c5637ef37b5f101", // Pizza Toxi-Queso (8 porciones)
+  "6a91ddadad28ba915206eead": "6a91bf3d9f83fec18c6a1d6e", // Pizza Pollo y Champiñón (4 porciones)
+  "6a91ddadad28ba915206eeb0": "6a91bf3d9f83fec18c6a1d6e", // Pizza Pollo y Champiñón (6 porciones)
+  "6a91ddadad28ba915206eeb3": "6a91bf3d9f83fec18c6a1d6e", // Pizza Pollo y Champiñón (8 porciones)
+  "6a91ddadad28ba915206eeb6": "6a91bf3d9f83fec18c6a1d6e", // Pizza Pollo y Champiñón (12 porciones)
+  "6a91db794d0819261eb3c2aa": "6a91bf3e0aa2e1a7c1286010", // Pizza Caprichosa (4 porciones)
+  "6a91db794d0819261eb3c2ad": "6a91bf3e0aa2e1a7c1286010", // Pizza Caprichosa (6 porciones)
+  "6a91db794d0819261eb3c2b0": "6a91bf3e0aa2e1a7c1286010", // Pizza Caprichosa (8 porciones)
+  "6a91db794d0819261eb3c2b3": "6a91bf3e0aa2e1a7c1286010", // Pizza Caprichosa (12 porciones)
+  "6a91de0c55b2f4a68f3c512f": "6a91bf3e55b2f4a68fd9b5b7", // Pizza Ranchera (4 porciones)
+  "6a91de0c55b2f4a68f3c5132": "6a91bf3e55b2f4a68fd9b5b7", // Pizza Ranchera (6 porciones)
+  "6a91de0c55b2f4a68f3c5135": "6a91bf3e55b2f4a68fd9b5b7", // Pizza Ranchera (8 porciones)
+  "6a91de0c55b2f4a68f3c5138": "6a91bf3e55b2f4a68fd9b5b7", // Pizza Ranchera (12 porciones)
+  "6a91dc0885c958017521774e": "6a91bf3e433807bf411dab38", // Pizza Carnívora (4 porciones)
+  "6a91dc0885c9580175217751": "6a91bf3e433807bf411dab38", // Pizza Carnívora (6 porciones)
+  "6a91dc0885c9580175217bc8": "6a91bf3e433807bf411dab38", // Pizza Carnívora (8 porciones)
+  "6a91dc0885c9580175217bf7": "6a91bf3e433807bf411dab38", // Pizza Carnívora (12 porciones)
+  "6a91dd58ad28ba9152058e55": "6a91bf3fa7c11b4ce37ce1d9", // Pizza Marinera (4 porciones)
+  "6a91dd58ad28ba9152058e58": "6a91bf3fa7c11b4ce37ce1d9", // Pizza Marinera (6 porciones)
+  "6a91dd58ad28ba9152058e5b": "6a91bf3fa7c11b4ce37ce1d9", // Pizza Marinera (8 porciones)
+  "6a91dd58ad28ba9152058e5e": "6a91bf3fa7c11b4ce37ce1d9", // Pizza Marinera (12 porciones)
+  "6a92364ba959429a37c0b9f1": "6a91bf4055b2f4a68fd9bad3", // Borde Queso (4 porciones)
+  "6a92364ba959429a37c0b9f4": "6a91bf4055b2f4a68fd9bad3", // Borde Queso (6 porciones)
+  "6a92364ba959429a37c0b9f7": "6a91bf4055b2f4a68fd9bad3", // Borde Queso (8 porciones)
+  "6a92364ba959429a37c0b9fa": "6a91bf4055b2f4a68fd9bad3", // Borde Queso (12 porciones)
+  "6a92357a2a9cceb356a42068": "6a91bf41433807bf411dc3c1", // Borde Bocadillo (4 porciones)
+  "6a92357a2a9cceb356a4206b": "6a91bf41433807bf411dc3c1", // Borde Bocadillo (6 porciones)
+  "6a92357a2a9cceb356a4206e": "6a91bf41433807bf411dc3c1", // Borde Bocadillo (8 porciones)
+  "6a92357a2a9cceb356a42071": "6a91bf41433807bf411dc3c1", // Borde Bocadillo (12 porciones)
+  "6a9235f173c07ca985f808f5": "6a91bf427c5637ef37b601d6", // Borde Mozzarella (4 porciones)
+  "6a9235f173c07ca985f808f8": "6a91bf427c5637ef37b601d6", // Borde Mozzarella (6 porciones)
+  "6a9235f173c07ca985f808fb": "6a91bf427c5637ef37b601d6", // Borde Mozzarella (8 porciones)
+  "6a9235f173c07ca985f808fe": "6a91bf427c5637ef37b601d6", // Borde Mozzarella (12 porciones)
+  "6a91e14da2cbc83f9613185d": "BS-PANZEROTTI", // Panzerotti Hawaiano Chicken
+  "6a91e24207a809d31a139bbb": "BS-PANZEROTTI", // Panzerotti Pollo y Jamón
+  "6a91e27555b2f4a68f4fc903": "BS-PANZEROTTI", // Panzerotti Pollo y Maíz
+  "6a91e1d407a809d31a113a87": "BS-PANZEROTTI", // Panzerotti Mexicano
+  "6a91e2104d0819261ed4af2c": "BS-PANZEROTTI", // Panzerotti Pollo y Champiñón
+  "6a91e11285c95801753c7825": "BS-PANZEROTTI", // Panzerotti Carnívoro
+  "6a91e0bd433807bf418d8214": "BS-PANZEROTTI", // Panzerotti 5 Carnes
+  "6a91e19c03a56e01f3bef758": "BS-PANZEROTTI", // Panzerotti Marinero
+  "6a91e3374d0819261ed8dcbd": "BS-LASANA", // Lasaña de Carne
+  "6a91e35da2cbc83f961a2e94": "BS-LASANA", // Lasaña de Pollo
+  "6a91e37e0e9cb0b00f6d874a": "BS-LASANA", // Lasaña Mixta
+  "6a91e3a10e9cb0b00f6df8cc": "BS-LASANA", // Lasaña Pollo y Champiñón
+  "6a91e49085c95801754ae3e5": "BS-LASANA", // Lasaña Trifásica
+  "6a95ca82de960d1a27dfd33c": "BS-COPA-HELADO", // Copa Feliz Cumpleaños
+  "6a95ca82de960d1a27dfd33f": "BS-COPA-HELADO", // Copa de Helado Exótica
+  "6a95ca82de960d1a27dfd339": "BS-COPA-HELADO", // Copa de Helado Sencilla
+  "6a95faaa1ec2f30997e37076": "6a95faaa1ec2f30997e3701d", // Ensalada de Frutas Grande
+  "6a95faaa1ec2f30997e37073": "6a95faaa1ec2f30997e3701d", // Ensalada de Frutas Mediana
+  "6a95faaa1ec2f30997e37070": "6a95faaa1ec2f30997e3701d", // Ensalada de Frutas Pequeña
+  "6a95c8c1bcf50bb22766985f": "BS-HELADO-PLANCHA", // Helado a la Plancha Banano
+  "6a95c8c1bcf50bb227669877": "BS-HELADO-PLANCHA", // Helado a la Plancha Brownie
+  "6a95c8c1bcf50bb22766986e": "BS-HELADO-PLANCHA", // Helado a la Plancha Capuchino
+  "6a95c8c1bcf50bb227669874": "BS-HELADO-PLANCHA", // Helado a la Plancha Cereza
+  "6a95c8c1bcf50bb22766986b": "BS-HELADO-PLANCHA", // Helado a la Plancha Chocolate
+  "6a95c8c1bcf50bb227669859": "BS-HELADO-PLANCHA", // Helado a la Plancha Fresa
+  "6a95c8c1bcf50bb227669865": "BS-HELADO-PLANCHA", // Helado a la Plancha Guanábana
+  "6a95c8c1bcf50bb227669871": "BS-HELADO-PLANCHA", // Helado a la Plancha Jumbo Maní
+  "6a95c8c1bcf50bb22766985c": "BS-HELADO-PLANCHA", // Helado a la Plancha Kiwi
+  "6a95c8c1bcf50bb227669862": "BS-HELADO-PLANCHA", // Helado a la Plancha Mango
+  "6a95c8c1bcf50bb227669868": "BS-HELADO-PLANCHA", // Helado a la Plancha Maracuyá
+  "6a95c8c1bcf50bb22766987d": "BS-HELADO-PLANCHA", // Helado a la Plancha Nutella
+  "6a95c8c1bcf50bb227669856": "BS-HELADO-PLANCHA", // Helado a la Plancha Oreo
+  "6a95c8c1bcf50bb22766987a": "BS-HELADO-PLANCHA", // Helado a la Plancha Snickers
+  "6a95ca82de960d1a27dfd321": "BS-HELADO-SENCILLO", // Helado en Cono Sencillo
+  "6a95ca82de960d1a27dfd336": "BS-HELADO-SENCILLO", // Helado en Vaso Sencillo
+  "6a95d66296de50e7012e7190": "BS-WAFFLE", // Waffle con Helado Especial
+  "6a95d66296de50e7012e718d": "BS-WAFFLE", // Waffle con Helado Sencillo
+  "6a95f9b0f6ec214ac9411ca6": "BS-FRAPPE", // Frappé Cereza
+  "6a95f9b0f6ec214ac9411c9a": "BS-FRAPPE", // Frappé Fresa
+  "6a95f9b0f6ec214ac9411ca9": "BS-FRAPPE", // Frappé Limonada de Coco
+  "6a95f9b0f6ec214ac9411ca3": "BS-FRAPPE", // Frappé Lulo
+  "6a95f9b0f6ec214ac9411c9d": "BS-FRAPPE", // Frappé Maracuyá
+  "6a95f9b0f6ec214ac9411ca0": "BS-FRAPPE", // Frappé Mora
+  "6a95d725325de09eb115f084": "BS-MALTEADA", // Malteada Arequipe
+  "6a95d725325de09eb115f07e": "BS-MALTEADA", // Malteada Fresa
+  "6a95d725325de09eb115f087": "BS-MALTEADA", // Malteada Nutella
+  "6a95d725325de09eb115f081": "BS-MALTEADA", // Malteada Oreo
+  "6a95fa24f6ec214ac9421636": "BS-SMOOTHIE", // Smoothie Encanto
+  "6a95fa24f6ec214ac9421630": "BS-SMOOTHIE", // Smoothie Frutos Amarillos
+  "6a95fa24f6ec214ac9421633": "BS-SMOOTHIE", // Smoothie Frutos Rojos
+  "6a95d4d556652e3afe9ca6d2": "BS-MALTEADA-KIDS", // Malteada Kids Blue
+  "6a95d4d556652e3afe9ca69d": "BS-MALTEADA-KIDS", // Malteada Kids Mikie
+  "6a95d4d556652e3afe9ca6cf": "BS-MALTEADA-KIDS", // Malteada Kids Pink
+  "6a95d472de960d1a27f88e2d": "BS-MENU-INFANTIL", // Menú Infantil Carrito
+  "6a95d472de960d1a27f88ee7": "BS-MENU-INFANTIL", // Menú Infantil Cerdito
+  "6a95d472de960d1a27f88e6a": "BS-MENU-INFANTIL", // Menú Infantil Gusanito
+  "6a95d472de960d1a27f88f31": "BS-MENU-INFANTIL", // Menú Infantil Osito
+  "6a95d472de960d1a27f88ee1": "BS-MENU-INFANTIL", // Menú Infantil Payasito
+  "6a95d472de960d1a27f88e29": "BS-MENU-INFANTIL", // Menú Infantil Ratoncito
+  "6a95fbd01ec2f30997e6b6ba": "BS-JUGO-NATURAL", // Jugo de Banano
+  "6a95fbd01ec2f30997e6b6c0": "BS-JUGO-NATURAL", // Jugo de Fresa
+  "6a95fbd01ec2f30997e6b6c9": "BS-JUGO-NATURAL", // Jugo de Guanábana
+  "6a95fbd01ec2f30997e6b6cc": "BS-JUGO-NATURAL", // Jugo de Lulo
+  "6a95fbd01ec2f30997e6b6b7": "BS-JUGO-NATURAL", // Jugo de Maracuyá
+  "6a95fbd01ec2f30997e6b6c3": "BS-JUGO-NATURAL", // Jugo de Milo
+  "6a95fbd01ec2f30997e6b6c6": "BS-JUGO-NATURAL", // Jugo de Mora
+  "6a95fbd01ec2f30997e6b6bd": "BS-JUGO-NATURAL", // Jugo de Zapote
+  "6a95fbd01ec2f30997e6b6b1": "BS-LIMONADA", // Limonada Cerezada
+  "6a95fbd01ec2f30997e6b6b4": "BS-LIMONADA", // Limonada Hierbabuena
+  "6a95fbd01ec2f30997e6b6ae": "BS-LIMONADA", // Limonada Natural
+  "6a95e0d049558a6c750fa300": "BS-MICHELADA-ESPECIAL", // Michelada Especial Blueberry
+  "6a95e0d049558a6c750fa2f1": "BS-MICHELADA-ESPECIAL", // Michelada Especial Cereza
+  "6a95e0d049558a6c750fa2ee": "BS-MICHELADA-ESPECIAL", // Michelada Especial Fresa
+  "6a95e0d049558a6c750fa2fa": "BS-MICHELADA-ESPECIAL", // Michelada Especial Frutos Rojos
+  "6a95e0d049558a6c750fa2fd": "BS-MICHELADA-ESPECIAL", // Michelada Especial Frutos Verdes
+  "6a95e0d049558a6c750fa2f7": "BS-MICHELADA-ESPECIAL", // Michelada Especial Mango Biche
+  "6a95e0d049558a6c750fa2f4": "BS-MICHELADA-ESPECIAL", // Michelada Especial Maracuyá
+  "6a95e0d049558a6c750fa303": "BS-MICHELADA-ESPECIAL", // Michelada Especial Tamarindo
+  "6a95e02fa92e36c93c6d3cc0": "BS-MICHELADA-TRADICIONAL", // Michelada Tradicional Blueberry
+  "6a95e02fa92e36c93c6d3cb1": "BS-MICHELADA-TRADICIONAL", // Michelada Tradicional Cereza
+  "6a95e02fa92e36c93c6d3cae": "BS-MICHELADA-TRADICIONAL", // Michelada Tradicional Fresa
+  "6a95e02fa92e36c93c6d3cba": "BS-MICHELADA-TRADICIONAL", // Michelada Tradicional Frutos Rojos
+  "6a95e02fa92e36c93c6d3cbd": "BS-MICHELADA-TRADICIONAL", // Michelada Tradicional Frutos Verdes
+  "6a95e02fa92e36c93c6d3cb7": "BS-MICHELADA-TRADICIONAL", // Michelada Tradicional Mango Biche
+  "6a95e02fa92e36c93c6d3cb4": "BS-MICHELADA-TRADICIONAL", // Michelada Tradicional Maracuyá
+  "6a95e02fa92e36c93c6d3cc3": "BS-MICHELADA-TRADICIONAL", // Michelada Tradicional Tamarindo
+  "690a9baf5c7b33c148afbec9": "BS-AGUA", // Agua Pequeña
+  "690a9bda97e31de265df0d44": "BS-AGUA", // Agua 600 ml
+  "690a9dda5ec7676b4109d626": "BS-COCA-COLA", // Coca-Cola Personal
+  "690a9d725ec7676b41083ef0": "BS-CUATRO", // Cuatro Personal
+  "690a9e383f0cf45bec6e16c5": "BS-JUGO-HIT", // Jugo Hit Personal
+  "690a9e0e182ce89cb5ee7c6f": "BS-POSTOBON", // Postobón Personal
+  "690a9edcc61dbcc72775d6c2": "BS-PONY-MALTA", // Pony Malta 1 L
+  "690a9f09c1ad1248fdba6d73": "BS-COCA-COLA", // Coca-Cola 1.5 L
+  "690a9fc1c1ad1248fdbc56e7": "BS-CUATRO", // Cuatro 1.5 L
+  "690a9e6a182ce89cb5eefea2": "BS-JUGO-HIT", // Jugo Hit 1 L
+  "690a9f42c1ad1248fdbb1557": "BS-PONY-MALTA", // Pony Malta 1.5 L
+  "69531841c41d9ccaf59ad299": "BS-POSTOBON", // Postobón 1.5 L
+  "6953182a691479f78d4fd07e": "BS-COCA-COLA", // Coca-Cola 2.5 L
+  "690a9f8120628c7607a9eda4": "BS-COCA-COLA", // Coca-Cola 3 L
+};
+
+/** item_group_id → título del grupo en Meta. */
+export const tituloGrupo = {
+  "BS-PECHUGA": "Pechuga",
+  "BS-CHULETA": "Chuleta",
+  "BS-ASADO": "Asado",
+  "68f9b599204fe26227456f14": "Picada",
+  "BS-SALCHIPAPA": "Salchipapa",
+  "BS-HAMBURGUESA": "Hamburguesa",
+  "BS-PERRO": "Perro Caliente",
+  "BS-MARIA-CASQUITO": "María Casquito",
+  "BS-PATACON-BURGER": "Patacón Burger",
+  "BS-PATACON-RELLENO": "Patacón Relleno",
+  "BS-DESGRANADO": "Desgranado",
+  "BS-SANDWICH": "Sándwich",
+  "6a91ba75433807bf410f69b7": "Pizza Hawaiana",
+  "6a91bb147c5637ef37a88bda": "Pizza Hawaiana Chicken",
+  "6a91bbf99f83fec18c5e8f8b": "Pizza Queso y Bocadillo",
+  "6a91bcc2433807bf41150f0b": "Pizza Jamón y Queso",
+  "6a91bd1e55b2f4a68fd2c6c4": "Pizza Mexicana",
+  "6a91bd90a2cbc83f969bc7f7": "Pizza Pollo y Jamón",
+  "6acacc71c2414a171f4691d6": "Pizza Pollo y Maíz",
+  "6a91be3c55b2f4a68fd65b6e": "Pizza Vegetariana",
+  "6a91be9f0aa2e1a7c126bc80": "Pizza Napolitana",
+  "6a91bf3c85c9580175c7a65b": "Pizza de Salami",
+  "6a91bf3c9f83fec18c6a1aef": "Pizza de Pepperoni",
+  "6a91bf3ca2cbc83f96a252f5": "Pizza La Paisita",
+  "6a91bf3c85c9580175c7a871": "Pizza Pollo y Tocineta",
+  "6a91bf3d7c5637ef37b5f101": "Pizza Toxi-Queso",
+  "6a91bf3d9f83fec18c6a1d6e": "Pizza Pollo y Champiñón",
+  "6a91bf3e0aa2e1a7c1286010": "Pizza Caprichosa",
+  "6a91bf3e55b2f4a68fd9b5b7": "Pizza Ranchera",
+  "6a91bf3e433807bf411dab38": "Pizza Carnívora",
+  "6a91bf3fa7c11b4ce37ce1d9": "Pizza Marinera",
+  "6a91bf4055b2f4a68fd9bad3": "Borde Queso",
+  "6a91bf41433807bf411dc3c1": "Borde Bocadillo",
+  "6a91bf427c5637ef37b601d6": "Borde Mozzarella",
+  "BS-PANZEROTTI": "Panzerotti",
+  "BS-LASANA": "Lasaña",
+  "BS-COPA-HELADO": "Copa de Helado",
+  "6a95faaa1ec2f30997e3701d": "Ensalada de Frutas",
+  "BS-HELADO-PLANCHA": "Helado a la Plancha",
+  "BS-HELADO-SENCILLO": "Helado Sencillo",
+  "BS-WAFFLE": "Waffle con Helado",
+  "BS-FRAPPE": "Frappé",
+  "BS-MALTEADA": "Malteada",
+  "BS-SMOOTHIE": "Smoothie",
+  "BS-MALTEADA-KIDS": "Malteada Kids",
+  "BS-MENU-INFANTIL": "Menú Infantil",
+  "BS-JUGO-NATURAL": "Jugo Natural",
+  "BS-LIMONADA": "Limonada",
+  "BS-MICHELADA-ESPECIAL": "Michelada Especial",
+  "BS-MICHELADA-TRADICIONAL": "Michelada Tradicional",
+  "BS-AGUA": "Agua",
+  "BS-COCA-COLA": "Coca-Cola",
+  "BS-CUATRO": "Cuatro",
+  "BS-JUGO-HIT": "Jugo Hit",
+  "BS-POSTOBON": "Postobón",
+  "BS-PONY-MALTA": "Pony Malta",
+};
+
+/** ID de la variante → valor que elige el cliente dentro del producto (campo size de Meta). */
+export const variantePorId = {
+  "68f9b0464023c130e6c82db4": "Asada",
+  "69333446f87b1fc7e017a9ed": "Ahumada",
+  "68f9b0e24023c130e6c88e80": "De Cerdo",
+  "68f9b0874023c130e6c8514e": "Gratinada",
+  "68f9b12adc8cd6ef3cca6c56": "Mixto",
+  "68f9b17969ea0df0fa608b89": "Trifásico",
+  "68f9b599204fe26227456f18": "2 personas",
+  "68f9b599204fe26227456f1b": "3 personas",
+  "68f9b599204fe26227456f1e": "4 personas",
+  "68f9b599204fe26227456f21": "5 personas",
+  "68f9b599204fe26227456f24": "6 personas",
+  "68f9b599204fe26227456f27": "Familiar",
+  "68f9b301e9f5c7d7299d5f38": "Sencilla",
+  "68f9b34eeed0d183fc4c41f0": "Mixta",
+  "68f9b3ace9f5c7d7299d9dd4": "Ranchera",
+  "68f9b3f9eed0d183fc4c6c8c": "Especial",
+  "68f9b47ceed0d183fc4ca826": "Súper Estación",
+  "68f9b62b69ea0df0fa62e7c2": "Sencilla",
+  "6901126ebf87d3a7996b3317": "Pollo",
+  "690112a972a153ce084392f4": "Ranchera",
+  "68f9b6540a78886bbeba7b16": "Doble Carne",
+  "690112d844cd5e1f60d9f3c0": "Mixta",
+  "6901132a6fb60f5fbaa8b054": "Estacionaria",
+  "6901138e76964c0018aa9eb5": "Sencillo + Papas",
+  "690113ccee6c4a4e9a132742": "Choriperro",
+  "6901140f6fc071bf5acfe879": "Ranchero",
+  "69011469ee6c4a4e9a148c06": "Estacionario",
+  "6901188a6fb60f5fbab5596f": "Sencillo",
+  "690118cf44cd5e1f60e7e19d": "Especial",
+  "690119276fb60f5fbab64530": "Sencillo",
+  "6901195872a153ce085348ff": "Pollo",
+  "6901198c5e3e3b0cc8daa201": "Ranchero",
+  "69011af9541ff74a53fe6633": "Sencillo",
+  "69011a3f5e3e3b0cc8dba4ca": "Doble Carne",
+  "690119df72a153ce08543554": "Mixto",
+  "69011a8a541ff74a53fdb60e": "Estacionario",
+  "69011b2ee66c3e035de1469e": "Especial",
+  "69011b9f72a153ce08575893": "Sencillo",
+  "69011bdbe66c3e035de273ed": "Especial",
+  "69011c0fbf87d3a79980900a": "Estacionario (2 personas)",
+  "69011c4a6fc071bf5ae192cc": "Sencillo",
+  "69011ccebf87d3a799822f02": "Carne",
+  "69011c98e66c3e035de39412": "Pollo",
+  "69011d10e66c3e035de49a3c": "Especial Estacionario",
+  "6a91ba75433807bf410f6a0b": "4 porciones",
+  "6a91ba75433807bf410f6a0e": "6 porciones",
+  "6a91ba75433807bf410f6a11": "8 porciones",
+  "6a91ba75433807bf410f6a14": "12 porciones",
+  "6a91bb147c5637ef37a88c2e": "4 porciones",
+  "6a91bb147c5637ef37a88c31": "6 porciones",
+  "6a91bb147c5637ef37a88c34": "8 porciones",
+  "6a91bb147c5637ef37a88c37": "12 porciones",
+  "6a91bbf99f83fec18c5e8fdf": "4 porciones",
+  "6a91bbf99f83fec18c5e8fe2": "6 porciones",
+  "6a91bbf99f83fec18c5e8fe5": "8 porciones",
+  "6a91bbf99f83fec18c5e8fe8": "12 porciones",
+  "6a91bcc2433807bf41150f5f": "4 porciones",
+  "6a91bcc2433807bf41150f62": "6 porciones",
+  "6a91bcc2433807bf41150f65": "8 porciones",
+  "6a91bcc2433807bf41150f68": "12 porciones",
+  "6a91bd1e55b2f4a68fd2c718": "4 porciones",
+  "6a91bd1e55b2f4a68fd2c71b": "6 porciones",
+  "6a91bd1e55b2f4a68fd2c71e": "8 porciones",
+  "6a91bd1e55b2f4a68fd2c721": "12 porciones",
+  "6a91bd90a2cbc83f969bc84b": "4 porciones",
+  "6a91bd90a2cbc83f969bc84e": "6 porciones",
+  "6a91bd90a2cbc83f969bc851": "8 porciones",
+  "6a91bd90a2cbc83f969bc854": "12 porciones",
+  "6acacd187301e8fc6786c467": "4 porciones",
+  "6acacd187301e8fc6786c46a": "6 porciones",
+  "6acacd187301e8fc6786c46d": "8 porciones",
+  "6acacd187301e8fc6786c470": "12 porciones",
+  "6a91be3c55b2f4a68fd65bc2": "4 porciones",
+  "6a91be3c55b2f4a68fd65bc5": "6 porciones",
+  "6a91be3c55b2f4a68fd65bc8": "8 porciones",
+  "6a91be3c55b2f4a68fd65bcb": "12 porciones",
+  "6a91be9f0aa2e1a7c126bcd4": "4 porciones",
+  "6a91be9f0aa2e1a7c126bcdf": "6 porciones",
+  "6a91be9f0aa2e1a7c126bce4": "8 porciones",
+  "6a91be9f0aa2e1a7c126bd57": "12 porciones",
+  "6a91df4a85c9580175339544": "4 porciones",
+  "6a91df4a85c9580175339582": "6 porciones",
+  "6a91df4a85c95801753395f3": "8 porciones",
+  "6a91df4a85c9580175339636": "12 porciones",
+  "6a91dc83433807bf4179ae76": "4 porciones",
+  "6a91dc83433807bf4179b18f": "6 porciones",
+  "6a91dc83433807bf4179bf7a": "8 porciones",
+  "6a91dc83433807bf4179bf7e": "12 porciones",
+  "6a91dcf0ad28ba91520367ef": "4 porciones",
+  "6a91dcf0ad28ba91520367f2": "6 porciones",
+  "6a91dcf0ad28ba91520367f5": "8 porciones",
+  "6a91dcf0ad28ba91520367f8": "12 porciones",
+  "6a91dedd0e9cb0b00f5964d6": "4 porciones",
+  "6a91dedd0e9cb0b00f5964d9": "6 porciones",
+  "6a91dedd0e9cb0b00f5964dc": "8 porciones",
+  "6a91dedd0e9cb0b00f5964df": "12 porciones",
+  "6a91de807c5637ef371e4eca": "4 porciones",
+  "6a91de807c5637ef371e4ece": "6 porciones",
+  "6a91de807c5637ef371e4ed4": "8 porciones",
+  "6a91ddadad28ba915206eead": "4 porciones",
+  "6a91ddadad28ba915206eeb0": "6 porciones",
+  "6a91ddadad28ba915206eeb3": "8 porciones",
+  "6a91ddadad28ba915206eeb6": "12 porciones",
+  "6a91db794d0819261eb3c2aa": "4 porciones",
+  "6a91db794d0819261eb3c2ad": "6 porciones",
+  "6a91db794d0819261eb3c2b0": "8 porciones",
+  "6a91db794d0819261eb3c2b3": "12 porciones",
+  "6a91de0c55b2f4a68f3c512f": "4 porciones",
+  "6a91de0c55b2f4a68f3c5132": "6 porciones",
+  "6a91de0c55b2f4a68f3c5135": "8 porciones",
+  "6a91de0c55b2f4a68f3c5138": "12 porciones",
+  "6a91dc0885c958017521774e": "4 porciones",
+  "6a91dc0885c9580175217751": "6 porciones",
+  "6a91dc0885c9580175217bc8": "8 porciones",
+  "6a91dc0885c9580175217bf7": "12 porciones",
+  "6a91dd58ad28ba9152058e55": "4 porciones",
+  "6a91dd58ad28ba9152058e58": "6 porciones",
+  "6a91dd58ad28ba9152058e5b": "8 porciones",
+  "6a91dd58ad28ba9152058e5e": "12 porciones",
+  "6a92364ba959429a37c0b9f1": "4 porciones",
+  "6a92364ba959429a37c0b9f4": "6 porciones",
+  "6a92364ba959429a37c0b9f7": "8 porciones",
+  "6a92364ba959429a37c0b9fa": "12 porciones",
+  "6a92357a2a9cceb356a42068": "4 porciones",
+  "6a92357a2a9cceb356a4206b": "6 porciones",
+  "6a92357a2a9cceb356a4206e": "8 porciones",
+  "6a92357a2a9cceb356a42071": "12 porciones",
+  "6a9235f173c07ca985f808f5": "4 porciones",
+  "6a9235f173c07ca985f808f8": "6 porciones",
+  "6a9235f173c07ca985f808fb": "8 porciones",
+  "6a9235f173c07ca985f808fe": "12 porciones",
+  "6a91e14da2cbc83f9613185d": "Hawaiano Chicken",
+  "6a91e24207a809d31a139bbb": "Pollo y Jamón",
+  "6a91e27555b2f4a68f4fc903": "Pollo y Maíz",
+  "6a91e1d407a809d31a113a87": "Mexicano",
+  "6a91e2104d0819261ed4af2c": "Pollo y Champiñón",
+  "6a91e11285c95801753c7825": "Carnívoro",
+  "6a91e0bd433807bf418d8214": "5 Carnes",
+  "6a91e19c03a56e01f3bef758": "Marinero",
+  "6a91e3374d0819261ed8dcbd": "Carne",
+  "6a91e35da2cbc83f961a2e94": "Pollo",
+  "6a91e37e0e9cb0b00f6d874a": "Mixta",
+  "6a91e3a10e9cb0b00f6df8cc": "Pollo y Champiñón",
+  "6a91e49085c95801754ae3e5": "Trifásica",
+  "6a95ca82de960d1a27dfd33c": "Feliz Cumpleaños",
+  "6a95ca82de960d1a27dfd33f": "Exótica",
+  "6a95ca82de960d1a27dfd339": "Sencilla",
+  "6a95faaa1ec2f30997e37076": "Grande",
+  "6a95faaa1ec2f30997e37073": "Mediana",
+  "6a95faaa1ec2f30997e37070": "Pequeña",
+  "6a95c8c1bcf50bb22766985f": "Banano",
+  "6a95c8c1bcf50bb227669877": "Brownie",
+  "6a95c8c1bcf50bb22766986e": "Capuchino",
+  "6a95c8c1bcf50bb227669874": "Cereza",
+  "6a95c8c1bcf50bb22766986b": "Chocolate",
+  "6a95c8c1bcf50bb227669859": "Fresa",
+  "6a95c8c1bcf50bb227669865": "Guanábana",
+  "6a95c8c1bcf50bb227669871": "Jumbo Maní",
+  "6a95c8c1bcf50bb22766985c": "Kiwi",
+  "6a95c8c1bcf50bb227669862": "Mango",
+  "6a95c8c1bcf50bb227669868": "Maracuyá",
+  "6a95c8c1bcf50bb22766987d": "Nutella",
+  "6a95c8c1bcf50bb227669856": "Oreo",
+  "6a95c8c1bcf50bb22766987a": "Snickers",
+  "6a95ca82de960d1a27dfd321": "Cono",
+  "6a95ca82de960d1a27dfd336": "Vaso",
+  "6a95d66296de50e7012e7190": "Especial",
+  "6a95d66296de50e7012e718d": "Sencillo",
+  "6a95f9b0f6ec214ac9411ca6": "Cereza",
+  "6a95f9b0f6ec214ac9411c9a": "Fresa",
+  "6a95f9b0f6ec214ac9411ca9": "Limonada de Coco",
+  "6a95f9b0f6ec214ac9411ca3": "Lulo",
+  "6a95f9b0f6ec214ac9411c9d": "Maracuyá",
+  "6a95f9b0f6ec214ac9411ca0": "Mora",
+  "6a95d725325de09eb115f084": "Arequipe",
+  "6a95d725325de09eb115f07e": "Fresa",
+  "6a95d725325de09eb115f087": "Nutella",
+  "6a95d725325de09eb115f081": "Oreo",
+  "6a95fa24f6ec214ac9421636": "Encanto",
+  "6a95fa24f6ec214ac9421630": "Frutos Amarillos",
+  "6a95fa24f6ec214ac9421633": "Frutos Rojos",
+  "6a95d4d556652e3afe9ca6d2": "Blue",
+  "6a95d4d556652e3afe9ca69d": "Mikie",
+  "6a95d4d556652e3afe9ca6cf": "Pink",
+  "6a95d472de960d1a27f88e2d": "Carrito",
+  "6a95d472de960d1a27f88ee7": "Cerdito",
+  "6a95d472de960d1a27f88e6a": "Gusanito",
+  "6a95d472de960d1a27f88f31": "Osito",
+  "6a95d472de960d1a27f88ee1": "Payasito",
+  "6a95d472de960d1a27f88e29": "Ratoncito",
+  "6a95fbd01ec2f30997e6b6ba": "Banano",
+  "6a95fbd01ec2f30997e6b6c0": "Fresa",
+  "6a95fbd01ec2f30997e6b6c9": "Guanábana",
+  "6a95fbd01ec2f30997e6b6cc": "Lulo",
+  "6a95fbd01ec2f30997e6b6b7": "Maracuyá",
+  "6a95fbd01ec2f30997e6b6c3": "Milo",
+  "6a95fbd01ec2f30997e6b6c6": "Mora",
+  "6a95fbd01ec2f30997e6b6bd": "Zapote",
+  "6a95fbd01ec2f30997e6b6b1": "Cerezada",
+  "6a95fbd01ec2f30997e6b6b4": "Hierbabuena",
+  "6a95fbd01ec2f30997e6b6ae": "Natural",
+  "6a95e0d049558a6c750fa300": "Blueberry",
+  "6a95e0d049558a6c750fa2f1": "Cereza",
+  "6a95e0d049558a6c750fa2ee": "Fresa",
+  "6a95e0d049558a6c750fa2fa": "Frutos Rojos",
+  "6a95e0d049558a6c750fa2fd": "Frutos Verdes",
+  "6a95e0d049558a6c750fa2f7": "Mango Biche",
+  "6a95e0d049558a6c750fa2f4": "Maracuyá",
+  "6a95e0d049558a6c750fa303": "Tamarindo",
+  "6a95e02fa92e36c93c6d3cc0": "Blueberry",
+  "6a95e02fa92e36c93c6d3cb1": "Cereza",
+  "6a95e02fa92e36c93c6d3cae": "Fresa",
+  "6a95e02fa92e36c93c6d3cba": "Frutos Rojos",
+  "6a95e02fa92e36c93c6d3cbd": "Frutos Verdes",
+  "6a95e02fa92e36c93c6d3cb7": "Mango Biche",
+  "6a95e02fa92e36c93c6d3cb4": "Maracuyá",
+  "6a95e02fa92e36c93c6d3cc3": "Tamarindo",
+  "690a9baf5c7b33c148afbec9": "Pequeña",
+  "690a9bda97e31de265df0d44": "600 ml",
+  "690a9dda5ec7676b4109d626": "Personal",
+  "690a9d725ec7676b41083ef0": "Personal",
+  "690a9e383f0cf45bec6e16c5": "Personal",
+  "690a9e0e182ce89cb5ee7c6f": "Personal",
+  "690a9edcc61dbcc72775d6c2": "1 L",
+  "690a9f09c1ad1248fdba6d73": "1.5 L",
+  "690a9fc1c1ad1248fdbc56e7": "1.5 L",
+  "690a9e6a182ce89cb5eefea2": "1 L",
+  "690a9f42c1ad1248fdbb1557": "1.5 L",
+  "69531841c41d9ccaf59ad299": "1.5 L",
+  "6953182a691479f78d4fd07e": "2.5 L",
+  "690a9f8120628c7607a9eda4": "3 L",
+};
+// </grupos-variantes>

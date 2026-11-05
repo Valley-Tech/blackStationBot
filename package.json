@@ -4,11 +4,15 @@
   "description": "Chatbot de WhatsApp de La Estación Parrilla Bar · Black's Pizza · Heladería Yellow (ValleyTech)",
   "main": "src/app.js",
   "type": "module",
-  "engines": { "node": ">=20" },
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "start": "node src/app.js",
     "dev": "nodemon src/app.js",
-    "verificar": "node scripts/verificar-catalogo.mjs"
+    "verificar": "node scripts/verificar-catalogo.mjs",
+    "catalogo:meta": "node scripts/actualizar-catalogo-meta.mjs",
+    "grupos": "node scripts/grupos-desde-csv.mjs"
   },
   "license": "ISC",
   "dependencies": {
