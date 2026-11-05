@@ -70,7 +70,7 @@ class WhatsAppService {
           type: "flow",
           header: {
             type: "text",
-            text: "Datos de envío:"
+            text: "Dame tus datos para el domicilio:"
           },
           body: { 
             text: "Haz clic aquí 👇" 
