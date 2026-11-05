@@ -449,8 +449,8 @@ class MessageHandler {
       },
       body: {
         text: config.VARIANTES_META && tieneVariantes
-          ? "Toca *Ver artículos* y luego un producto para elegir el sabor o el tamaño 👆 (cada opción con su foto y precio). Agrégalo al carrito 🛒 y envía tu pedido."
-          : "Toca *Ver artículos*, agrega lo que quieras al carrito 🛒 y envía tu pedido."
+          ? "Agrega lo que quieras al carrito 🛒 y envía tu pedido."
+          : ""
       },
       footer: {
         text: carta.marca
