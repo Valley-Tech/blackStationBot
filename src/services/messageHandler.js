@@ -583,10 +583,8 @@ Total: $${Number(datosPedido.monto || 0).toLocaleString('es-CO')} COP`;
         await whatsappService.sendMessage(to, 'No encontré los datos de tu pedido 😔. Vuelve a enviarlo desde el carrito, por favor.');
         return;
       }
-      if (datosPedido.datos.address) {
+      if (datosPedido.datos.address=== "domicilio") {
         datosPedido.monto = Number(datosPedido.monto || 0) + negocio.domicilio;
-      } else {
-        datosPedido.datos.address = "Recogida en el restaurante";
       }
       if (datosPedido.datos.pago === "Efectivo") {
         const templateVars = [
