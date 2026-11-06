@@ -6,6 +6,7 @@ import { nextEncuesta } from "../services/flowEncuesta.js";
 import messageHandler from '../services/messageHandler.js';
 import crypto from "crypto";
 import { CRM_MODE, forwardWebhook, toMetaMessage } from '../services/crmAdapter.js';
+import { reportarFalla, entradaDe } from '../services/reportarFallas.js';
 import { nombrePorId } from '../data/catalogo.js';
 import { sesion, nuevoPedido, numeroDeToken } from '../services/sesiones.js';
 
@@ -138,6 +139,8 @@ class WebhookController {
       }
     } catch (error) {
       console.error('Error procesando el mensaje:', error);
+      // v3.4: la falla aparece en el CRM, en el chat de este cliente, con su log.
+      reportarFalla(error, { to: message?.from, waMessageId: message?.id, step: 'atender el mensaje del cliente', entrada: entradaDe(message) });
     }
   }
 
@@ -157,6 +160,7 @@ class WebhookController {
       decryptedRequest = decryptRequest(req.body, privateKey, config.PASSPHRASE);
     } catch (err) {
       console.error(err);
+      reportarFalla(err, { step: 'Flow con endpoint: descifrar la solicitud (PRIVATE_KEY / PASSPHRASE)', level: err?.statusCode === 421 ? 'warning' : 'error' });
       if (err instanceof FlowEndpointException) {
         return res.status(err.statusCode).send();
       }
@@ -185,6 +189,7 @@ class WebhookController {
       }
     } catch (error) {
       console.error('[flow] error armando la pantalla:', error.message);
+      reportarFalla(error, { to: numero, step: `Flow con endpoint: pantalla ${decryptedBody.screen ?? decryptedBody.action}` });
       return res.status(500).send();
     }
     if (s) {
@@ -210,6 +215,7 @@ class WebhookController {
       res.status(200).send('Evento recibido');
     } catch (error) {
       console.error("Error procesando evento de Wompi:", error);
+      reportarFalla(error, { step: 'evento de pago de Wompi' });
       res.status(500).send('Error procesando evento');
     }
   }

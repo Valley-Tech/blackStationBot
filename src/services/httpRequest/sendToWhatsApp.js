@@ -2,6 +2,7 @@ import axios from "axios";
 import config from '../../config/env.js';
 import { logAxiosError } from '../printDetailError.js';
 import { CRM_MODE, crmEnabled, canBotReply, recordSent, sendViaCrm } from '../crmAdapter.js';
+import { reportarFalla } from '../reportarFallas.js';
 
 /**
  * Reemplazo de sendToWhatsApp: misma firma y mismas exportaciones que el
@@ -57,6 +58,8 @@ const sendToWhatsApp = async (data) => {
         return response.data;
     } catch (error) {
         logAxiosError('Error: ', error);
+        // v3.4: Meta rechazó el mensaje → falla en el CRM con el mensaje que no salió.
+        if (data.status !== 'read') reportarFalla(error, { to, step: `envío a Meta (${data.type ?? 'text'})`, pendingMessage: data });
         throw error;
     }
 };

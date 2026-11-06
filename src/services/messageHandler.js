@@ -5,6 +5,7 @@ import { createWompiPaymentLink, getWompiTransactionStatus } from './wompiServic
 import { enviarPedidoALoggro } from './loggroService.js';
 import { saveUserDataByNumber } from './googleSheetsService.js';
 import { logAxiosError } from './printDetailError.js';
+import { reportarFalla } from './reportarFallas.js';
 import { downloadImageFromMeta } from './httpRequest/sendToWhatsApp.js';
 import { uploadToPublicStorage } from './awsS3Service.js';
 import { sesion, tokenFlow } from './sesiones.js';
@@ -616,6 +617,8 @@ Total: $${Number(datosPedido.monto || 0).toLocaleString('es-CO')} COP`;
           response = `*Resumen de tu pedido*🛒:\n\n${pedidoStr}\n*Total:* $${datosPedido.monto.toLocaleString('es-CO')} COP\n\nUtiliza el siguiente *link de pago*:\n\nhttps://checkout.wompi.co/l/${idlink}\n\nLuego de realizar el pago espera unos segundos y automáticamente te lo confirmamos! 😊`;
         } catch (error) {
           response = "Hubo un problema al generar el enlace de pago. Por favor, intenta nuevamente.";
+          // v3.4: el cliente quería pagar con PSE y no recibió el link.
+          reportarFalla(error, { to, step: 'generar el link de pago de Wompi (PSE)', monto: datosPedido.monto, pedido: pedidoStrTemplate });
         }
       } else if (datosPedido.datos.pago === "Transferencia") {
         userOrderDataMap[to] = {
@@ -669,6 +672,8 @@ Total: $${Number(datosPedido.monto || 0).toLocaleString('es-CO')} COP`;
       publicUrl = await uploadToPublicStorage(imageBuffer, message.image.mime_type);
     } catch (error) {
       logAxiosError('comprobante', error);
+      // v3.4: el aviso sale con la imagen genérica en vez de la foto del comprobante.
+      reportarFalla(error, { to: from, level: 'warning', step: 'descargar el comprobante de Meta y subirlo a S3' });
     }
     const templateVars = [
       datosUsuario.name || "",
@@ -688,6 +693,7 @@ Total: $${Number(datosPedido.monto || 0).toLocaleString('es-CO')} COP`;
   async avisarNumerosOficiales(plantilla, imagen, templateVars) {
     if (!negocio.numerosOficiales.length) {
       console.warn('[avisos] NOTIFY_NUMBERS vacío: nadie recibe el aviso del pedido. Configura los números en Railway.');
+      reportarFalla(new Error('NOTIFY_NUMBERS vacío: nadie del negocio recibió el aviso del pedido'), { step: `avisar al negocio (plantilla ${plantilla})`, pendingMessage: { type: 'template', template: { name: plantilla }, variables: templateVars } });
       return;
     }
     for (const numero of negocio.numerosOficiales) {
@@ -704,6 +710,8 @@ Total: $${Number(datosPedido.monto || 0).toLocaleString('es-CO')} COP`;
 
       if (!phone) {
         console.error("No se encontró el número de WhatsApp para la transacción:", paymentLinkId);
+        // v3.4: Wompi avisó un pago, pero el bot no sabe de qué cliente es (p. ej. se reinició después de crear el link).
+        reportarFalla(new Error(`Pago de Wompi sin cliente asociado (link ${paymentLinkId}): el cliente no recibió la confirmación`), { step: 'evento de pago de Wompi', transaccion: transaction.id, estado: transaction.status, monto: transaction.amount_in_cents ? transaction.amount_in_cents / 100 : undefined });
         return;
       }
       let status;
@@ -711,6 +719,7 @@ Total: $${Number(datosPedido.monto || 0).toLocaleString('es-CO')} COP`;
         status = await getWompiTransactionStatus(transactionId);
       } catch (error) {
         console.error("Error consultando el estado de la transacción:", error);
+        reportarFalla(error, { to: phone, step: 'consultar el estado del pago en Wompi', transaccion: transactionId });
         return;
       }
       console.log(`Estado de la transacción ${transactionId}: ${status}`);
@@ -755,6 +764,7 @@ Total: $${Number(datosPedido.monto || 0).toLocaleString('es-CO')} COP`;
 
     } catch (error) {
       console.error("Error en handleWompiEvent:", error);
+      reportarFalla(error, { step: 'procesar el pago de Wompi (handleWompiEvent)' });
     }
   }
 

@@ -1,6 +1,10 @@
 import express from 'express';
 import config from './config/env.js';
 import webhookRoutes from './routes/webhookRoutes.js';
+import { instalarCapturaGlobal } from './services/reportarFallas.js';
+
+// v3.4: los errores que nadie atrapó también llegan al CRM (Analítica → Fallas).
+instalarCapturaGlobal();
 
 const app = express();
 app.use(express.json({

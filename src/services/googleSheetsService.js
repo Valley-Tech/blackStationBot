@@ -1,4 +1,5 @@
 import { google } from 'googleapis';
+import { reportarFalla } from './reportarFallas.js';
 
 const sheets = google.sheets('v4');
 
@@ -116,6 +117,7 @@ export const saveUserDataByNumber = async (datos, spreadsheetId) => {
     return true;
   } catch (error) {
     console.error("Error guardando estado de pago:", error.message);
+    reportarFalla(error, { level: 'warning', step: 'guardar el estado del pago en Google Sheets', numero: datos?.numero });
     return false;
   }
 };
@@ -166,6 +168,8 @@ const appendToSheet = async (data, spreadsheetId) => {
         return 'Datos correctamente agregados';
     } catch (error) {
         console.error(error);
+        // v3.4: el pedido o la reserva no quedó en la hoja de cálculo.
+        reportarFalla(error, { level: 'warning', step: 'guardar en Google Sheets', hoja: spreadsheetId ? 'configurada' : 'SPREADSHEETID vacío' });
     }
 };
 
