@@ -54,8 +54,7 @@ Celular: ${data.celular}\n
 Motivo de reserva: ${data.evento}\n
 Fecha de reserva:   ${data.fecha}\n
 Hora de reserva:  ${horaReserva}\n
-Cuantas personas:   ${data.cuantos}\n
-De donde nos visitas:   ${data.donde}`;
+Cuantas personas:   ${data.cuantos}`;
         return {
           ...SCREEN_RESPONSES.RESUMEN,
           data: {
