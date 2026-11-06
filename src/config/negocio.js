@@ -31,7 +31,7 @@ export default {
   ubicacion: {
     latitude: numeroONull(process.env.UBICACION_LAT),
     longitude: numeroONull(process.env.UBICACION_LNG),
-    name: 'La Estación Parrilla Bar',
+    name: 'La Estación Blacks',
     address: process.env.UBICACION_DIRECCION || 'Calle 10A # 10-80, Centro, La Loma, El Paso, Cesar',
   },
 
