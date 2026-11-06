@@ -36,26 +36,23 @@ export const nextScreen = async (decryptedBody, numero) => {
   if (action === "data_exchange") {
     switch (screen) {
       case "RESERVA":  
-      const horaReserva = data.evento === "Festival Gastronomico" 
-  ? data.hora 
-  : data.evento === "Cumpleaños" 
+      const horaReserva = data.evento === "Reserva normal" 
+  ? data.horanormal 
+  : data.evento === "Celebración" 
     ? data.horario
-    : data.evento === "Reserva normal"
-    ? data.horanormal
-    : "";
-
-    const calendario = data.evento === "Festival Gastronomico" 
-      ? data.fechafestival 
-      : data.evento === "Cumpleaños" 
-        ? data.fecha
-        : data.evento === "Reserva normal"
-        ? data.fechanormal
-        : "";
+    : "";  
+    // const calendario = data.evento === "Festival Gastronomico" 
+    //   ? data.fechafestival 
+    //   : data.evento === "Cumpleaños" 
+    //     ? data.fecha
+    //     : data.evento === "Reserva normal"
+    //     ? data.fechanormal
+    //     : "";
         
         const details = `Nombre:    ${data.nombre}\n
 Celular: ${data.celular}\n
 Motivo de reserva: ${data.evento}\n
-Fecha de reserva:   ${calendario}\n
+Fecha de reserva:   ${data.fecha}\n
 Hora de reserva:  ${horaReserva}\n
 Cuantas personas:   ${data.cuantos}\n
 De donde nos visitas:   ${data.donde}`;
