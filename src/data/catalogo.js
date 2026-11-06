@@ -134,6 +134,7 @@ export const product_names = {
   "Pizza Toxi-Queso (4 porciones)": "6a91de807c5637ef371e4eca",
   "Pizza Toxi-Queso (6 porciones)": "6a91de807c5637ef371e4ece",
   "Pizza Toxi-Queso (8 porciones)": "6a91de807c5637ef371e4ed4",
+  "Pizza Toxi-Queso (12 porciones)": "6aed07390ac7f23128b50988",
   "Pizza Pollo y Champiñón (4 porciones)": "6a91ddadad28ba915206eead",
   "Pizza Pollo y Champiñón (6 porciones)": "6a91ddadad28ba915206eeb0",
   "Pizza Pollo y Champiñón (8 porciones)": "6a91ddadad28ba915206eeb3",
@@ -1225,6 +1226,7 @@ export const grupoPorId = {
   "6a91de807c5637ef371e4eca": "6a91bf3d7c5637ef37b5f101", // Pizza Toxi-Queso (4 porciones)
   "6a91de807c5637ef371e4ece": "6a91bf3d7c5637ef37b5f101", // Pizza Toxi-Queso (6 porciones)
   "6a91de807c5637ef371e4ed4": "6a91bf3d7c5637ef37b5f101", // Pizza Toxi-Queso (8 porciones)
+  "6aed07390ac7f23128b50988": "6a91bf3d7c5637ef37b5f101", // Pizza Toxi-Queso (12 porciones)
   "6a91ddadad28ba915206eead": "6a91bf3d9f83fec18c6a1d6e", // Pizza Pollo y Champiñón (4 porciones)
   "6a91ddadad28ba915206eeb0": "6a91bf3d9f83fec18c6a1d6e", // Pizza Pollo y Champiñón (6 porciones)
   "6a91ddadad28ba915206eeb3": "6a91bf3d9f83fec18c6a1d6e", // Pizza Pollo y Champiñón (8 porciones)
@@ -1520,6 +1522,7 @@ export const variantePorId = {
   "6a91de807c5637ef371e4eca": "4 porciones",
   "6a91de807c5637ef371e4ece": "6 porciones",
   "6a91de807c5637ef371e4ed4": "8 porciones",
+  "6aed07390ac7f23128b50988": "12 porciones",
   "6a91ddadad28ba915206eead": "4 porciones",
   "6a91ddadad28ba915206eeb0": "6 porciones",
   "6a91ddadad28ba915206eeb3": "8 porciones",
