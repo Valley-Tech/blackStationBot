@@ -267,9 +267,9 @@ class MessageHandler {
       {
         type: 'reply', reply: { id: 'option_1', title: 'Pedir 🛒' }
       },
-      {
-        type: 'reply', reply: { id: 'option_2', title: 'Reservar 📋' }
-      },
+      // {
+      //   type: 'reply', reply: { id: 'option_2', title: 'Reservar 📋' }
+      // },
     ];
 
     await whatsappService.sendInteractiveButtons(to, menuMessage, buttons);
