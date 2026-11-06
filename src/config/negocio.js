@@ -26,7 +26,7 @@ export default {
   cuentasBancarias: '🏦Cuentas bancarias:\n\n*Bancolombia Ahorros:* 70400023806 - Jorge Ariza',
 
   // Ubicación. ⚠️ completar coordenadas (Google Maps → clic derecho sobre el local → copiar) y dirección.
-  ubicacion: { latitude: null, longitude: null, name: 'La Estación Parrilla Bar', address: '⚠️ Dirección por definir' },
+  ubicacion: { latitude: 9.6210503, longitude: -73.5926785, name: 'La Estación Blacks', address: 'Cl. 10ª # 9-148' },
 
   // Cartas en PDF (súbelas a S3 o a cualquier URL pública). Si la URL está vacía, no se envía.
   cartas: [
