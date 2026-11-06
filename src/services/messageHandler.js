@@ -6,6 +6,7 @@ import { enviarPedidoALoggro } from './loggroService.js';
 import { saveUserDataByNumber } from './googleSheetsService.js';
 import { logAxiosError } from './printDetailError.js';
 import { reportarFalla } from './reportarFallas.js';
+import { esDomicilio, valorDomicilio, entregaTexto, variablesReserva, horaReserva, fechaReserva } from './datosFlow.js';
 import { downloadImageFromMeta } from './httpRequest/sendToWhatsApp.js';
 import { uploadToPublicStorage } from './awsS3Service.js';
 import { sesion, tokenFlow } from './sesiones.js';
@@ -267,9 +268,9 @@ class MessageHandler {
       {
         type: 'reply', reply: { id: 'option_1', title: 'Pedir 🛒' }
       },
-      // {
-      //   type: 'reply', reply: { id: 'option_2', title: 'Reservar 📋' }
-      // },
+      {
+        type: 'reply', reply: { id: 'option_2', title: 'Reservar 📋' }
+      },
     ];
 
     await whatsappService.sendInteractiveButtons(to, menuMessage, buttons);
@@ -584,14 +585,18 @@ Total: $${Number(datosPedido.monto || 0).toLocaleString('es-CO')} COP`;
         await whatsappService.sendMessage(to, 'No encontré los datos de tu pedido 😔. Vuelve a enviarlo desde el carrito, por favor.');
         return;
       }
-      if (datosPedido.datos.address=== "domicilio") {
-        datosPedido.monto = Number(datosPedido.monto || 0) + negocio.domicilio;
+      // Domicilio ($3.000) solo si eligió "Pedir a domicilio" (address = "domicilio"), y una sola vez
+      // aunque el Flow llegue repetido. Este monto es el que va en el aviso, en Wompi y en la transferencia.
+      if (esDomicilio(datosPedido.datos) && !datosPedido.domicilioIncluido) {
+        datosPedido.monto = Number(datosPedido.monto || 0) + valorDomicilio(datosPedido.datos);
+        datosPedido.domicilioIncluido = true;
       }
+      const entrega = entregaTexto(datosPedido.datos);
       if (datosPedido.datos.pago === "Efectivo") {
         const templateVars = [
           datosPedido.datos.name,
           datosPedido.datos.phone,
-          datosPedido.datos.address,
+          entrega,
           pedidoStrTemplate,
           datosPedido.datos.pago,
           datosPedido.monto ? datosPedido.monto.toLocaleString('es-CO') : ""
@@ -604,10 +609,11 @@ Total: $${Number(datosPedido.monto || 0).toLocaleString('es-CO')} COP`;
         try {
           userOrderDataMap[to] = {
             ...datosPedido.datos,
+            address: entrega,
             monto: datosPedido.monto,
             pedidoStr: pedidoStrTemplate
           };
-          // Generar enlace de pago WOMPI
+          // Generar enlace de pago WOMPI (con el domicilio incluido si aplica)
           const idlink = await createWompiPaymentLink(
             datosPedido.monto * 100, // Monto en centavos
             "COP",
@@ -623,6 +629,7 @@ Total: $${Number(datosPedido.monto || 0).toLocaleString('es-CO')} COP`;
       } else if (datosPedido.datos.pago === "Transferencia") {
         userOrderDataMap[to] = {
           ...datosPedido.datos,
+          address: entrega,
           monto: datosPedido.monto,
           pedidoStr: pedidoStrTemplate
         };
@@ -635,18 +642,9 @@ Total: $${Number(datosPedido.monto || 0).toLocaleString('es-CO')} COP`;
         await this.menuReserva(to);
         return;
       }
-      const { horario, calendario } = camposReserva(datosReserva);
-
-      // Variables para la plantilla (en el orden del body)
-      const templateVars = [
-        datosReserva.nombre,
-        datosReserva.celular,
-        datosReserva.evento,
-        datosReserva[calendario],
-        datosReserva[horario],
-        datosReserva.cuantos,
-        datosReserva.donde
-      ];
+      // Variables de confirmacion_reserva: exactamente las 6 de la plantilla aprobada
+      // (antes iban 7 con "donde" y Meta la rechazaba con el error 132000).
+      const templateVars = variablesReserva(datosReserva);
 
       for (const numero of [to, ...negocio.numerosOficiales]) {
         await whatsappService.sendTemplateReserva(numero, negocio.imagenReserva, templateVars);
@@ -796,7 +794,7 @@ Total: $${Number(datosPedido.monto || 0).toLocaleString('es-CO')} COP`;
       numero,
       data.name,
       productos,
-      data.address,
+      entregaTexto(data), // "Domicilio" o "Recoger en el restaurante"
       data.phone,
       data.pago,
       data.recomendacion,
@@ -818,7 +816,7 @@ Total: $${Number(datosPedido.monto || 0).toLocaleString('es-CO')} COP`;
     }));
 
     // Si hay domicilio y existe el producto "Domicilio" en Loggro, va como un producto más.
-    if (data.address && config.LOGGRO_DOMICILIO_PRODUCT_ID && negocio.domicilio) {
+    if (esDomicilio(data) && config.LOGGRO_DOMICILIO_PRODUCT_ID && negocio.domicilio) {
       orders.push({
         product: config.LOGGRO_DOMICILIO_PRODUCT_ID,
         locationStock: config.LOGGRO_LOCATION_STOCK,
@@ -830,7 +828,7 @@ Total: $${Number(datosPedido.monto || 0).toLocaleString('es-CO')} COP`;
 
     const pedidoLoggro = {
       table: config.LOGGRO_TABLE_ID,
-      groupName: `Nombre: ${data.name}\nTeléfono: ${data.phone}\nDirección: ${data.address || 'Recoge en el restaurante'}`,
+      groupName: `Nombre: ${data.name}\nTeléfono: ${data.phone}\nEntrega: ${entregaTexto(data)}`,
       orders
     };
 
@@ -855,16 +853,15 @@ Total: $${Number(datosPedido.monto || 0).toLocaleString('es-CO')} COP`;
   completeAppointment(data, numero) {
     const fechayhora = new Date().toLocaleString('es-CO', { timeZone: 'America/Bogota' });
     const spreadsheetId = process.env.SPREADSHEETID_RESERVA;
-    const { horario, calendario } = camposReserva(data);
+    // Columnas: A WhatsApp · B Nombre · C Celular · D Motivo · E Fecha · F Hora · G Personas · H Registrada el
     const userData = [
       numero || "No disponible",
       data.nombre,
       data.celular,
       data.evento,
-      data[calendario],
-      data[horario],
+      fechaReserva(data),
+      horaReserva(data),
       data.cuantos,
-      data.donde,
       fechayhora
     ];
     if (spreadsheetId) appendToSheet(userData, spreadsheetId);
@@ -916,32 +913,14 @@ Total: $${Number(datosPedido.monto || 0).toLocaleString('es-CO')} COP`;
   async sendLocation(to) {
     const { latitude, longitude, name, address } = negocio.ubicacion;
     if (latitude == null || longitude == null) {
-      console.warn('[ubicacion] faltan las coordenadas en src/config/negocio.js');
-      await whatsappService.sendMessage(to, `📍 *${name}*\n${address}`);
+      console.warn('[ubicacion] faltan UBICACION_LAT y UBICACION_LNG en Railway: se envía la dirección con el enlace de Google Maps');
+      const mapa = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${name}, ${address}`)}`;
+      await whatsappService.sendMessage(to, `📍 *${name}*\n${address}\n\nCómo llegar: ${mapa}`);
       return;
     }
     await whatsappService.sendLocationMessage(to, latitude, longitude, name, address);
   }
 
-}
-
-/** Campos del Flow de reserva según el motivo (igual que SamuelitoBot). */
-function camposReserva(data) {
-  const horario = data.evento === "Festival Gastronomico"
-    ? 'hora'
-    : data.evento === "Cumpleaños"
-      ? 'horario'
-      : data.evento === "Reserva normal"
-        ? 'horanormal'
-        : "";
-  const calendario = data.evento === "Festival Gastronomico"
-    ? 'fechafestival'
-    : data.evento === "Cumpleaños"
-      ? 'fecha'
-      : data.evento === "Reserva normal"
-        ? 'fechanormal'
-        : "";
-  return { horario, calendario };
 }
 
 export default new MessageHandler();

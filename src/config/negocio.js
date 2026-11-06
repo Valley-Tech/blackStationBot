@@ -25,8 +25,15 @@ export default {
   // Cuentas para transferencia. ⚠️ completar con las del restaurante.
   cuentasBancarias: '🏦Cuentas bancarias:\n\n*Bancolombia Ahorros:* 70400023806 - Jorge Ariza',
 
-  // Ubicación. ⚠️ completar coordenadas (Google Maps → clic derecho sobre el local → copiar) y dirección.
-  ubicacion: { latitude: 9.6210503, longitude: -73.5926785, name: 'La Estación Blacks', address: 'Cl. 10ª # 9-148' },
+  // Ubicación. Dirección del RUT; las coordenadas van en Railway (UBICACION_LAT y UBICACION_LNG):
+  // Google Maps → clic derecho sobre el local → clic en los números (se copian "lat, lng").
+  // Sin coordenadas se manda la dirección con el enlace de Google Maps.
+  ubicacion: {
+    latitude: numeroONull(process.env.UBICACION_LAT),
+    longitude: numeroONull(process.env.UBICACION_LNG),
+    name: 'La Estación Parrilla Bar',
+    address: process.env.UBICACION_DIRECCION || 'Calle 10A # 10-80, Centro, La Loma, El Paso, Cesar',
+  },
 
   // Cartas en PDF (súbelas a S3 o a cualquier URL pública). Si la URL está vacía, no se envía.
   cartas: [
@@ -50,6 +57,11 @@ export default {
     ],
   },
 };
+
+function numeroONull(v) {
+  const n = Number(String(v ?? '').trim().replace(',', '.'));
+  return String(v ?? '').trim() && Number.isFinite(n) ? n : null;
+}
 
 function fmtHora(hhmm) {
   const [h, m] = String(hhmm).split(':').map(Number);

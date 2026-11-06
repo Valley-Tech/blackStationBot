@@ -1,5 +1,6 @@
 import messageHandler from '../services/messageHandler.js';
 import negocio from '../config/negocio.js';
+import { esDomicilio, valorDomicilio, entregaTexto } from './datosFlow.js';
 
 // Flow de PEDIDO: mismas pantallas que SamuelitoBot (DETAILS → SUMMARY → SUCCESS).
 const SCREEN_RESPONSES = {
@@ -40,14 +41,14 @@ export const getNextScreen = async (decryptedBody, productos, total, pedidoStr, 
     let result;
     switch (screen) {
       case "DETAILS": {
-        // El domicilio se suma solo si el cliente escribió dirección.
-        const conDomicilio = Boolean(data.address);
-        const totalFinal = (Number(total) || 0) + (conDomicilio ? negocio.domicilio : 0);
+        // El domicilio se suma solo si el cliente eligió "Pedir a domicilio" (address = "domicilio").
+        const conDomicilio = esDomicilio(data);
+        const totalFinal = (Number(total) || 0) + valorDomicilio(data);
         const lineas = [
           `Nombre:    ${data.name}\n`,
           `Pedido: \n${pedidoStr}\n`,
           `Total: ${cop(totalFinal)}${conDomicilio && negocio.domicilio ? ` (Domicilio: ${cop(negocio.domicilio)})` : ''}\n`,
-          ...(conDomicilio ? [`Dirección:    ${data.address}\n`] : []),
+          `Entrega:    ${entregaTexto(data)}\n`,
           `Celular de contacto:    ${data.phone}\n`,
           `Medio de pago:    ${data.pago}`,
           ...(data.recomendacion ? [`\nRecomendaciones:    ${data.recomendacion}`] : []),

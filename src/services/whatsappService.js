@@ -106,7 +106,8 @@ class WhatsAppService {
           {
             type: "body",
             // Meta rechaza variables vacías o con saltos de línea: se limpian aquí.
-            parameters: variables.slice(0, 7).map((v) => ({ type: "text", text: limpiarVariable(v) }))
+            // confirmacion_reserva tiene 6 variables (PLANTILLA_RESERVA_VARIABLES para cambiarlo sin tocar código).
+            parameters: variables.slice(0, Number(process.env.PLANTILLA_RESERVA_VARIABLES) || 6).map((v) => ({ type: "text", text: limpiarVariable(v) }))
           }
         ]
       }

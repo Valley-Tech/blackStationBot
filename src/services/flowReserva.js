@@ -1,4 +1,5 @@
 import messageHandler from './messageHandler.js';
+import { horaReserva, fechaReserva } from './datosFlow.js';
 
 const SCREEN_RESPONSES = {
   RESUMEN: {
@@ -36,24 +37,13 @@ export const nextScreen = async (decryptedBody, numero) => {
   if (action === "data_exchange") {
     switch (screen) {
       case "RESERVA":  
-      const horaReserva = data.evento === "Reserva normal" 
-  ? data.horanormal 
-  : data.evento === "Celebración" 
-    ? data.horario
-    : "";  
-    // const calendario = data.evento === "Festival Gastronomico" 
-    //   ? data.fechafestival 
-    //   : data.evento === "Cumpleaños" 
-    //     ? data.fecha
-    //     : data.evento === "Reserva normal"
-    //     ? data.fechanormal
-    //     : "";
-        
+        // Hora y fecha según el motivo: las mismas funciones que usan la plantilla y Google Sheets (datosFlow.js).
+
         const details = `Nombre:    ${data.nombre}\n
 Celular: ${data.celular}\n
 Motivo de reserva: ${data.evento}\n
-Fecha de reserva:   ${data.fecha}\n
-Hora de reserva:  ${horaReserva}\n
+Fecha de reserva:   ${fechaReserva(data)}\n
+Hora de reserva:  ${horaReserva(data)}\n
 Cuantas personas:   ${data.cuantos}`;
         return {
           ...SCREEN_RESPONSES.RESUMEN,

@@ -3,6 +3,27 @@ import { reportarFalla } from './reportarFallas.js';
 
 const sheets = google.sheets('v4');
 
+/**
+ * Explica en español por qué Google Sheets rechazó la operación, para el log y
+ * para Analítica → Fallas del CRM (403 = la hoja no está compartida con la cuenta de servicio).
+ */
+function explicarErrorSheets(error, spreadsheetId) {
+  const status = error?.code ?? error?.status ?? error?.response?.status;
+  const cuenta = process.env.GOOGLE_CLIENT_EMAIL || '(GOOGLE_CLIENT_EMAIL vacío en Railway)';
+  const hoja = spreadsheetId || '(sin ID)';
+  let mensaje;
+  if (!spreadsheetId) mensaje = 'Google Sheets: falta el ID de la hoja (SPREADSHEETID_PEDIDO / SPREADSHEETID_RESERVA / SPREADSHEETID_SURVEY en Railway)';
+  else if (Number(status) === 403) mensaje = `Google Sheets 403: la cuenta de servicio ${cuenta} no tiene permiso sobre la hoja ${hoja}. Ábrela → Compartir → agrega ${cuenta} como Editor`;
+  else if (Number(status) === 404) mensaje = `Google Sheets 404: no existe una hoja con el ID ${hoja} (revisa el ID en Railway: es lo que va entre /d/ y /edit en el enlace)`;
+  else if (/plantilla "ORIGINAL"/.test(error?.message ?? '')) mensaje = `Google Sheets: la hoja ${hoja} no tiene la pestaña "ORIGINAL" (es la plantilla que se copia cada día)`;
+  else if (/not supported for this document/i.test(error?.message ?? '')) mensaje = `Google Sheets: el archivo ${hoja} es un Excel (.xlsx). Ábrelo y usa Archivo → Guardar como Hojas de cálculo de Google, y pon el ID nuevo en Railway`;
+  else mensaje = `Google Sheets: ${error?.message ?? error}`;
+  return Object.assign(new Error(mensaje), { code: status ? `SHEETS_${status}` : 'SHEETS', stack: `${mensaje}\n${String(error?.stack ?? '').split('\n').slice(1).join('\n')}` });
+}
+
+/** La clave privada del .env (Railway guarda los saltos de línea como \\n). */
+const clavePrivada = () => String(process.env.GOOGLE_PRIVATE_KEY ?? '').replace(/\\n/g, '\n');
+
 // Obtiene la fecha actual en formato DD/MM/YYYY usando la zona horaria de Colombia
 function getTodaySheetName() {
     const now = new Date();
@@ -68,7 +89,7 @@ export const saveUserDataByNumber = async (datos, spreadsheetId) => {
         type: process.env.GOOGLE_TYPE,
         project_id: process.env.GOOGLE_PROJECT_ID,
         private_key_id: process.env.GOOGLE_PRIVATE_KEY_ID,
-        private_key: process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+        private_key: clavePrivada(),
         client_email: process.env.GOOGLE_CLIENT_EMAIL,
         client_id: process.env.GOOGLE_CLIENT_ID,
         auth_uri: process.env.GOOGLE_AUTH_URI,
@@ -116,8 +137,9 @@ export const saveUserDataByNumber = async (datos, spreadsheetId) => {
 
     return true;
   } catch (error) {
-    console.error("Error guardando estado de pago:", error.message);
-    reportarFalla(error, { level: 'warning', step: 'guardar el estado del pago en Google Sheets', numero: datos?.numero });
+    const falla = explicarErrorSheets(error, spreadsheetId);
+    console.error("Error guardando estado de pago:", falla.message);
+    reportarFalla(falla, { level: 'warning', step: 'guardar el estado del pago en Google Sheets', numero: datos?.numero });
     return false;
   }
 };
@@ -134,12 +156,9 @@ async function addRowToSheet(auth, spreadsheetId, values, sheetName) {
         auth,
     };
 
-    try {
-        const response = (await sheets.spreadsheets.values.append(request)).data;
-        return response;
-    } catch (error) {
-        console.error(error);
-    }
+    // Sin try/catch aquí: si falla, appendToSheet lo explica y lo reporta al CRM.
+    const response = (await sheets.spreadsheets.values.append(request)).data;
+    return response;
 }
 
 const appendToSheet = async (data, spreadsheetId) => {
@@ -149,7 +168,7 @@ const appendToSheet = async (data, spreadsheetId) => {
                 type: process.env.GOOGLE_TYPE,
                 project_id: process.env.GOOGLE_PROJECT_ID,
                 private_key_id: process.env.GOOGLE_PRIVATE_KEY_ID,
-                private_key: process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+                private_key: clavePrivada(),
                 client_email: process.env.GOOGLE_CLIENT_EMAIL,
                 client_id: process.env.GOOGLE_CLIENT_ID,
                 auth_uri: process.env.GOOGLE_AUTH_URI,
@@ -167,9 +186,10 @@ const appendToSheet = async (data, spreadsheetId) => {
 
         return 'Datos correctamente agregados';
     } catch (error) {
-        console.error(error);
-        // v3.4: el pedido o la reserva no quedó en la hoja de cálculo.
-        reportarFalla(error, { level: 'warning', step: 'guardar en Google Sheets', hoja: spreadsheetId ? 'configurada' : 'SPREADSHEETID vacío' });
+        // v3.4: el pedido, la reserva o la encuesta no quedó en la hoja de cálculo.
+        const falla = explicarErrorSheets(error, spreadsheetId);
+        console.error('[sheets]', falla.message);
+        reportarFalla(falla, { level: 'warning', step: 'guardar en Google Sheets', hoja: spreadsheetId || 'vacía', fila: Array.isArray(data) ? data.slice(0, 4).join(' | ') : undefined });
     }
 };
 
