@@ -32,7 +32,7 @@ import negocio from '../config/negocio.js';
  */
 
 // Plantillas (las mismas de SamuelitoBot; créalas en la WABA de La Estación).
-const PLANTILLA_PEDIDO = 'mensaje_nuevo_pedido';
+const PLANTILLA_PEDIDO = 'nuevo_pedido';
 const PLANTILLA_COMPROBANTE = 'comprobante_pago';
 
 function isWithinBusinessHours() {
