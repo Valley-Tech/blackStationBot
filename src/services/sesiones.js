@@ -24,6 +24,11 @@ export function sesion(numero) {
   return s;
 }
 
+/** Sesión sin crearla ni marcarla como "último que escribió" (para recordatorios). */
+export function obtenerSesion(numero) {
+  return numero ? sesiones.get(numero) ?? null : null;
+}
+
 /** Empieza un pedido nuevo para ese número (borra el anterior). */
 export function nuevoPedido(numero, { productos, pedidoStr, monto }) {
   const s = sesion(numero);

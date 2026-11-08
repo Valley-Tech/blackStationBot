@@ -66,6 +66,7 @@ export const getNextScreen = async (decryptedBody, productos, total, pedidoStr, 
       case "SUMMARY":
         messageHandler.completeHiring(pedidoStr, data, numero);
         messageHandler.completeOrder(productos, data);
+        messageHandler.pedidoEnviado(numero, data); // v3.5: fin de los recordatorios; habilita adicionales
         result = {
           ...SCREEN_RESPONSES.SUCCESS,
           data: {

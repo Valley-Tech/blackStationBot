@@ -59,7 +59,7 @@ class WhatsAppService {
     }
   }
 
-  async sendFlow(to, action) {
+  async sendFlow(to, action, { header = 'Dame tus datos para el domicilio:', body = 'Haz clic aquí 👇' } = {}) {
     try {
       const data = {
         recipient_type: 'individual',
@@ -70,10 +70,10 @@ class WhatsAppService {
           type: "flow",
           header: {
             type: "text",
-            text: "Dame tus datos para el domicilio:"
+            text: header
           },
-          body: { 
-            text: "Haz clic aquí 👇" 
+          body: {
+            text: body
           },
           action
         },

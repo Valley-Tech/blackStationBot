@@ -129,6 +129,30 @@ export async function askAi(to, text) {
   }
 }
 
+/**
+ * Búsqueda de platos con la IA del CRM (la misma de MerkCentro24): entiende la
+ * frase del cliente ("me regalas 3 salchipapas", "una piza hawaiana") y devuelve
+ * los productos reales de la lista "Catálogo de productos" del chatbot en el CRM.
+ * Devuelve { items:[{id,name,price,category}], none } o null si no está disponible
+ * (IA apagada, sin lista de productos, CRM caído): el bot usa su búsqueda local.
+ */
+const avisosBusqueda = new Set();
+export async function searchProducts(to, text, { limit = 20 } = {}) {
+  if (!crmEnabled) return null;
+  try {
+    const { data } = await crm.post('/ai/products/search', { text, to, phoneNumberId: CRM_PHONE_NUMBER_ID, limit }, { timeout: 30000 });
+    return data ?? null;
+  } catch (error) {
+    const code = error.response?.data?.error?.code ?? error.response?.data?.code;
+    if (error.response?.status === 409) {
+      if (!avisosBusqueda.has(code)) { avisosBusqueda.add(code); console.log(`[crm] búsqueda de productos con IA no disponible (${code}); se usa la búsqueda local`); }
+      return null;
+    }
+    console.warn('[crm] la búsqueda de productos del CRM no respondió:', describe(error));
+    return null;
+  }
+}
+
 // Caché corta para no preguntar al CRM en cada uno de los 5 mensajes de un menú.
 const activeCache = new Map();
 /** ¿Sigue activo el bot en la conversación con este número? (true si el CRM no responde). */

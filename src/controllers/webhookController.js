@@ -107,32 +107,16 @@ class WebhookController {
         for (const [id, at] of seenMessages) if (at < limit) seenMessages.delete(id);
       }
     }
+    // Números del personal u otros a los que el bot no debe responder (NO_RESPONDER_A).
+    if (config.NO_RESPONDER_A.includes(String(message?.from ?? '').replace(/\D/g, ''))) return;
     try {
       const s = sesion(message.from);
       if (message?.type === 'interactive' && message?.interactive.type === 'nfm_reply') {
         await messageHandler.handleIncomingMessage(message, senderInfo, s.ventana, s.datosReserva, s.datosPedido, s.pedidoStr);
       }
       else if (message?.type === 'order') {
-        // product_names va NOMBRE → ID (data/catalogo.js). Para mostrar el nombre de
-        // lo que llegó en el carrito se usa nombrePorId, que es la misma tabla al revés.
-        const order = message.order;
-        const productos = order.product_items ?? [];
-
-        // Calcula el total usando reduce
-        const precioTotal = productos.reduce((total, item) => total + (item.item_price * item.quantity), 0);
-
-        // Renombra los productos usando el diccionario
-        const productosNombres = productos.map(item => {
-          const nombre = nombrePorId[item.product_retailer_id] || item.product_retailer_id;
-          if (!nombrePorId[item.product_retailer_id]) console.warn('[pedido] producto sin nombre en data/catalogo.js:', item.product_retailer_id);
-          return `${nombre} x${item.quantity}`;
-        });
-
-        // Construye el string del pedido para mostrarlo bonito
-        const pedidoStr = productosNombres.join('\n');
-
-        const nuevo = nuevoPedido(message.from, { productos, pedidoStr, monto: precioTotal });
-        await messageHandler.handleHiringFlow(message.from, pedidoStr, nuevo.datosPedido);
+        // v3.5: el carrito se confirma antes del Flow (y se puede sumar, reemplazar o ser un adicional).
+        await messageHandler.recibirCarrito(message.from, message.order);
       }
       else {
         await messageHandler.handleIncomingMessage(message, senderInfo);

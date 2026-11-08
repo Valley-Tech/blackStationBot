@@ -80,8 +80,14 @@ export default {
   FLOW_ID_ENCUESTA: process.env.FLOW_ID_ENCUESTA,
   NOTIFY_NUMBERS: (process.env.NOTIFY_NUMBERS || '').split(',').map((n) => n.replace(/\D/g, '')).filter(Boolean),
   DOMICILIO_VALOR: Number(process.env.DOMICILIO_VALOR ?? 3000),
-  HORA_APERTURA: process.env.HORA_APERTURA || '12:00',
-  HORA_CIERRE: process.env.HORA_CIERRE || '23:00',
+  HORA_APERTURA: process.env.HORA_APERTURA || '16:00',           // turno: 4:00 p. m.
+  HORA_CIERRE: process.env.HORA_CIERRE || '00:00',               // a 12:00 a. m. (pasa la medianoche)
+  // v3.5 · seguimiento del pedido sin terminar y adicionales
+  RECORDATORIO_PEDIDO_MIN: Number(process.env.RECORDATORIO_PEDIDO_MIN) || 5, // cada cuántos minutos se recuerda
+  RECORDATORIO_PEDIDO_MAX: Number(process.env.RECORDATORIO_PEDIDO_MAX ?? 2),  // cuántas veces como máximo (0 = nunca)
+  ADICIONAL_MINUTOS: Number(process.env.ADICIONAL_MINUTOS) || 60,           // ventana para sumar un adicional a un pedido enviado
+  // Números a los que el bot NO responde (p. ej. el personal del restaurante que escribe a la línea).
+  NO_RESPONDER_A: (process.env.NO_RESPONDER_A || '').split(',').map((n) => n.replace(/\D/g, '')).filter(Boolean),
   LOGGRO_TABLE_ID: process.env.LOGGRO_TABLE_ID,               // mesa "Domicilios/WhatsApp" en Loggro
   LOGGRO_LOCATION_STOCK: process.env.LOGGRO_LOCATION_STOCK || '68f9ad7234a2d185b5e0bf68', // bodega General
   LOGGRO_DOMICILIO_PRODUCT_ID: process.env.LOGGRO_DOMICILIO_PRODUCT_ID, // producto "Domicilio" en Loggro (opcional)
