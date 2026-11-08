@@ -25,6 +25,7 @@ import config from '../config/env.js';
 import sendToWhatsApp from './httpRequest/sendToWhatsApp.js';
 import { searchProducts } from './crmAdapter.js';
 import { normalizar, cantidadPedida } from './conversacion.js';
+import { tieneFoto, asegurarFotos } from './fotosCatalogo.js';
 
 const MAX_CARRUSEL = 10;
 const MAX_LISTA = 30;
@@ -156,8 +157,17 @@ export function hablaDePlatos(texto) {
  * fue genérica, agrega la familia (misma sección de la carta).
  */
 export function armarTarjetas(ids, texto) {
+  return armar(ids, texto).tarjetas;
+}
+
+/**
+ * v3.5.3: solo productos con FOTO VÁLIDA en el catálogo de Meta (fotosCatalogo.js).
+ * Un producto sin foto no aparece en WhatsApp y hace fallar el carrusel (#131009).
+ * Devuelve { tarjetas, sinFoto } — sinFoto: platos que el cliente pidió y aún no tienen foto.
+ */
+function armar(ids, texto) {
   const encontrados = ids.map((id) => INDICE.get(id)).filter(Boolean);
-  if (!encontrados.length) return [];
+  if (!encontrados.length) return { tarjetas: [], sinFoto: [] };
   const clave = (e) => (config.VARIANTES_META && e.grupo ? `g:${e.grupo}` : `p:${e.id}`);
 
   const tarjetas = new Map(); // clave → { ids:[], e }
@@ -182,13 +192,30 @@ export function armarTarjetas(ids, texto) {
     if (generica && tarjetasSeccion.size <= MAX_CARRUSEL) for (const e of hermanos) if (!tarjetas.has(clave(e))) agregar(e, false);
   }
 
-  // Producto que abre cada tarjeta: la variante que pidió (o la más económica de las encontradas).
-  return [...tarjetas.values()].map((t) => {
-    const candidatos = t.principal ? t.ids : [...INDICE.values()].filter((e) => clave(e) === t.clave).map((e) => e.id);
-    const id = candidatos.slice().sort((a, b) => (INDICE.get(a).precio ?? 0) - (INDICE.get(b).precio ?? 0))[0];
+  // Producto que abre cada tarjeta: la variante que pidió (o la más económica de las encontradas),
+  // siempre una CON FOTO. Si la que pidió no tiene foto, se abre otra variante del mismo plato que sí tenga.
+  const porPrecio = (a, b) => (INDICE.get(a).precio ?? 0) - (INDICE.get(b).precio ?? 0);
+  const sinFoto = [];
+  const lista = [];
+  for (const t of tarjetas.values()) {
+    const grupo = [...INDICE.values()].filter((e) => clave(e) === t.clave).map((e) => e.id);
+    const pedidos = t.principal ? t.ids : grupo;
+    const id = pedidos.filter(tieneFoto).sort(porPrecio)[0] ?? grupo.filter(tieneFoto).sort(porPrecio)[0];
+    if (!id) {
+      if (t.principal) { const e = INDICE.get(t.ids[0]); sinFoto.push({ nombre: e.tituloGrupo && t.clave.startsWith('g:') ? e.tituloGrupo : e.nombre, precio: e.precio }); }
+      continue;
+    }
     const e = INDICE.get(id);
-    return { id, nombre: e.tituloGrupo && t.clave.startsWith('g:') ? e.tituloGrupo : e.nombre, precio: e.precio, seccion: e.tituloSeccion, carta: e.carta, marca: e.marca, conVariantes: t.clave.startsWith('g:'), principal: t.principal };
-  });
+    lista.push({ id, nombre: e.tituloGrupo && t.clave.startsWith('g:') ? e.tituloGrupo : e.nombre, precio: e.precio, seccion: e.tituloSeccion, carta: e.carta, marca: e.marca, conVariantes: t.clave.startsWith('g:'), principal: t.principal });
+  }
+  return { tarjetas: lista.slice(0, MAX_LISTA), sinFoto };
+}
+
+/** Productos de las mismas secciones y grupos (para revisar sus fotos en una sola pasada). */
+function relacionados(ids) {
+  const secciones = new Set(ids.map((id) => INDICE.get(id)?.seccion).filter(Boolean));
+  const grupos = new Set(ids.map((id) => INDICE.get(id)?.grupo).filter(Boolean));
+  return [...INDICE.values()].filter((e) => secciones.has(e.seccion) || (e.grupo && grupos.has(e.grupo))).map((e) => e.id);
 }
 
 // ---------------------------------------------------------------------------
@@ -213,7 +240,9 @@ export async function buscarPlatos(to, texto) {
     console.warn('[platos] la búsqueda con IA del CRM no está disponible: se usa la búsqueda local. Sube docs/productos-crm-blackstation.csv al CRM (Chatbots → IA y conocimiento → Catálogo de productos) y activa la IA.');
   }
   if (!ids.length && local.length) { ids = local.map((x) => x.e.id); fuente = 'local'; }
-  return { tarjetas: armarTarjetas(ids, texto), fuente };
+  await asegurarFotos(relacionados(ids)); // ¿las fotos existen de verdad? (máx. 3 s, con caché)
+  const { tarjetas, sinFoto } = armar(ids, texto);
+  return { tarjetas, sinFoto, fuente };
 }
 
 // ---------------------------------------------------------------------------
@@ -231,8 +260,8 @@ function textoCuerpo(tarjetas, texto) {
   const cantidad = cantidadPedida(texto);
   const variantes = tarjetas.some((t) => t.conVariantes);
   const n = tarjetas.length;
-  const intro = n === 1 ? '¡Aquí la tienes! 👇' : `Encontré ${n} opciones para ti 👇${n > 2 ? ' Desliza para verlas todas.' : ''}`;
-  const pasos = `Toca Ver${variantes ? ', elige el tipo o el tamaño' : ''} y agrégala al carrito 🛒${cantidad && cantidad > 1 ? ` (pon la cantidad: ${cantidad})` : ''}.`;
+  const intro = n === 1 ? '¡Aquí la tienes! 👇' : `Encontré ${n} opciones para ti 👇${n > 2}`;
+  const pasos = `Toca Ver${variantes} y agrégala al carrito 🛒${cantidad && cantidad > 1 ? ` (pon la cantidad: ${cantidad})` : ''}.`;
   return `${intro} ${pasos} Cuando tengas todo, envía el carrito y te confirmo el pedido 😊`;
 }
 
@@ -267,6 +296,12 @@ export async function enviarTarjetas(to, tarjetas, texto = '') {
     console.warn('[platos] no se pudo enviar la tarjeta/carrusel; se envía la lista de productos:', error.response?.data?.error?.message ?? error.message);
   }
   return enviarLista(to, tarjetas, body);
+}
+
+/** Platos que el cliente pidió pero aún no tienen foto en el catálogo (no se pueden mostrar en tarjeta). */
+export function textoSinFoto(sinFoto) {
+  const lineas = sinFoto.slice(0, 8).map((p) => `• ${p.nombre}${p.precio ? ` · $${Number(p.precio).toLocaleString('es-CO')}` : ''}`);
+  return `Sí lo tenemos 😋\n\n${lineas.join('\n')}\n\nTodavía no está en nuestro catálogo de WhatsApp, así que no lo puedes agregar al carrito. Escribe *asesor* y una persona toma tu pedido 🙌`;
 }
 
 /** Lista de productos con carrito (más de 10 platos, o respaldo del carrusel). */

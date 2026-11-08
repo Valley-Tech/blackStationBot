@@ -13,7 +13,8 @@
     "verificar": "node scripts/verificar-catalogo.mjs",
     "catalogo:meta": "node scripts/actualizar-catalogo-meta.mjs",
     "grupos": "node scripts/grupos-desde-csv.mjs",
-    "productos-crm": "node scripts/productos-crm.mjs"
+    "productos-crm": "node scripts/productos-crm.mjs",
+    "fotos": "node scripts/fotos.mjs"
   },
   "license": "ISC",
   "dependencies": {

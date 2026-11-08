@@ -11,7 +11,7 @@ import { downloadImageFromMeta } from './httpRequest/sendToWhatsApp.js';
 import { uploadToPublicStorage } from './awsS3Service.js';
 import { sesion, tokenFlow, nuevoPedido, obtenerSesion } from './sesiones.js';
 import { separarSaludo, esCortesia, esCancelar, esPreguntaGeneral, turnoActual, dentroDeHorario } from './conversacion.js';
-import { buscarPlatos, enviarTarjetas, hablaDePlatos } from './busquedaPlatos.js';
+import { buscarPlatos, enviarTarjetas, hablaDePlatos, textoSinFoto } from './busquedaPlatos.js';
 import { product_names, CATALOGOS, areaPorId, grupoPorId, precios, nombrePorId } from '../data/catalogo.js';
 import config from '../config/env.js';
 import negocio from '../config/negocio.js';
@@ -1023,7 +1023,7 @@ class MessageHandler {
 
     // Platos: la IA completa el nombre y se muestran las tarjetas del catálogo.
     if (hablaDePlatos(t)) {
-      const { tarjetas } = await buscarPlatos(from, t);
+      const { tarjetas, sinFoto } = await buscarPlatos(from, t);
       const carta = this.cartaPorTexto(lower);
       if (tarjetas.length > 10 && carta && !pregunta) return this.handleMenuOption(from, `cat:${carta}`); // "quiero una pizza" → la carta completa
       if (tarjetas.length) {
@@ -1033,6 +1033,11 @@ class MessageHandler {
           if (respuesta) await whatsappService.sendMessage(from, respuesta);
         }
         await enviarTarjetas(from, tarjetas, t);
+        return;
+      }
+      if (sinFoto?.length && !pregunta) {
+        // Lo pidió, pero todavía no tiene foto en Meta (no sale en el catálogo de WhatsApp).
+        await whatsappService.sendMessage(from, textoSinFoto(sinFoto));
         return;
       }
     }

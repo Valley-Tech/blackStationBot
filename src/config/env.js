@@ -88,6 +88,9 @@ export default {
   ADICIONAL_MINUTOS: Number(process.env.ADICIONAL_MINUTOS) || 60,           // ventana para sumar un adicional a un pedido enviado
   // Carrusel de productos (2 a 10 tarjetas). TARJETAS_CARRUSEL=false → se usa la lista de productos con carrito.
   TARJETAS_CARRUSEL: !/^(0|false|no)$/i.test(process.env.TARJETAS_CARRUSEL || 'true'),
+  // v3.5.3: carrusel y tarjeta solo con productos que tienen foto válida en Meta (docs/catalogo-meta-la-estacion.csv).
+  SOLO_CON_FOTO: !/^(0|false|no)$/i.test(process.env.SOLO_CON_FOTO || 'true'),
+  VERIFICAR_FOTOS: !/^(0|false|no)$/i.test(process.env.VERIFICAR_FOTOS || 'true'), // revisa en línea que la foto exista
   // Números a los que el bot NO responde (p. ej. el personal del restaurante que escribe a la línea).
   NO_RESPONDER_A: (process.env.NO_RESPONDER_A || '').split(',').map((n) => n.replace(/\D/g, '')).filter(Boolean),
   LOGGRO_TABLE_ID: process.env.LOGGRO_TABLE_ID,               // mesa "Domicilios/WhatsApp" en Loggro
