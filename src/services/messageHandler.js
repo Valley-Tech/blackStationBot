@@ -853,17 +853,20 @@ Total: $${Number(datosPedido.monto || 0).toLocaleString('es-CO')} COP`;
   completeAppointment(data, numero) {
     const fechayhora = new Date().toLocaleString('es-CO', { timeZone: 'America/Bogota' });
     const spreadsheetId = process.env.SPREADSHEETID_RESERVA;
-    // Columnas: A WhatsApp · B Nombre · C Celular · D Motivo · E Fecha · F Hora · G Personas · H Registrada el
-    const userData = [
-      numero || "No disponible",
-      data.nombre,
-      data.celular,
-      data.evento,
-      fechaReserva(data),
-      horaReserva(data),
-      data.cuantos,
-      fechayhora
-    ];
+    // Se guarda por NOMBRE de columna (fila 1 de la hoja): "Whatsapp o Usuario", "Nombre Completo",
+    // "Celular de Contacto", "Motivo de reserva", "Fecha de Reserva", "Hora de Reserva",
+    // "Cuántas personas", "Fecha y hora de registro". Las columnas que no reconoce (p. ej.
+    // "Estado de Reserva") quedan vacías para que las llenes tú.
+    const userData = {
+      whatsapp: numero || "No disponible",
+      nombre: data.nombre,
+      celular: data.celular,
+      motivo: data.evento,
+      fecha: fechaReserva(data),
+      hora: horaReserva(data),
+      personas: data.cuantos,
+      registro: fechayhora,
+    };
     if (spreadsheetId) appendToSheet(userData, spreadsheetId);
   }
 

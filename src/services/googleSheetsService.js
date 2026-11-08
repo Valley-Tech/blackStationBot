@@ -144,21 +144,91 @@ export const saveUserDataByNumber = async (datos, spreadsheetId) => {
   }
 };
 
-async function addRowToSheet(auth, spreadsheetId, values, sheetName) {
-    const request = {
-        spreadsheetId,
-        range: `${sheetName}`,
-        valueInputOption: 'RAW',
-        insertDataOption: 'INSERT_ROWS',
-        resource: {
-            values: [values],
-        },
-        auth,
-    };
+// ---------------------------------------------------------------------------
+//  Escritura de filas: de arriba hacia abajo (v3.4.3)
+// ---------------------------------------------------------------------------
+// Antes se usaba values.append: Google Sheets busca dónde "termina la tabla" y
+// escribe DEBAJO de ella. Con una Tabla de Sheets (encabezado verde con filtros)
+// las filas vacías ya formateadas cuentan como parte de la tabla, así que la
+// reserva quedaba al final (fila 16) en vez de en la fila 2. Ahora se busca la
+// primera fila libre (columna A vacía) desde la fila 2 y se escribe ahí.
 
+const rango = (sheetName, a1) => `'${String(sheetName).replace(/'/g, "''")}'!${a1}`;
+const sinTildes = (t) => String(t ?? '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+
+// Escrituras en serie por hoja: dos reservas al mismo tiempo no caen en la misma fila.
+const colas = new Map();
+function enSerie(clave, tarea) {
+    const anterior = colas.get(clave) ?? Promise.resolve();
+    const siguiente = anterior.catch(() => {}).then(tarea);
+    colas.set(clave, siguiente);
+    siguiente.finally(() => { if (colas.get(clave) === siguiente) colas.delete(clave); }).catch(() => {});
+    return siguiente;
+}
+
+/** Fila (número) de la primera celda vacía en la columna A, desde la fila 2. */
+async function primeraFilaLibre(auth, spreadsheetId, sheetName) {
+    const { data } = await sheets.spreadsheets.values.get({ spreadsheetId, range: rango(sheetName, 'A2:A'), auth });
+    const valores = data.values || [];
+    const libre = valores.findIndex((fila) => !String(fila?.[0] ?? '').trim());
+    return 2 + (libre === -1 ? valores.length : libre);
+}
+
+/**
+ * Campos que se pueden guardar por NOMBRE de columna (fila 1 de la hoja).
+ * Así no importa el orden de tus columnas ni si agregas otras (p. ej. "Estado de Reserva",
+ * que el bot deja vacía para que la llenes tú). El orden de esta lista importa:
+ * "Fecha y hora de registro" se reconoce antes que "Fecha" y "Hora".
+ */
+const CAMPOS = [
+    ['registro', /registr|creada|recibid|fecha y hora/],
+    ['whatsapp', /whatsapp|usuario/],
+    ['nombre', /nombre/],
+    ['celular', /celular|telefono|contacto/],
+    ['motivo', /motivo|evento|ocasion|tipo de reserva/],
+    ['fecha', /fecha/],
+    ['hora', /hora/],
+    ['personas', /persona|cuant/],
+];
+const avisados = new Set();
+
+/** Convierte { nombre, celular, … } en la fila según los títulos de la fila 1. */
+async function filaPorEncabezados(auth, spreadsheetId, sheetName, datos) {
+    const { data } = await sheets.spreadsheets.values.get({ spreadsheetId, range: rango(sheetName, '1:1'), auth });
+    const titulos = (data.values?.[0] || []).map(sinTildes);
+    const usados = new Set();
+    // null = esa celda no se toca (Sheets la salta): las columnas que llenas a mano quedan intactas.
+    const fila = titulos.map((t) => {
+        const campo = CAMPOS.find(([k, re]) => !usados.has(k) && re.test(t))?.[0];
+        if (!campo || !(campo in datos)) return null;
+        usados.add(campo);
+        return datos[campo] ?? '';
+    });
+    const sinColumna = Object.keys(datos).filter((k) => !usados.has(k) && datos[k] != null && datos[k] !== '');
+    const clave = `${spreadsheetId}|${sinColumna.join(',')}`;
+    if (sinColumna.length && !avisados.has(clave)) {
+        avisados.add(clave);
+        const msg = `Google Sheets: la hoja no tiene columna para ${sinColumna.join(', ')} (títulos de la fila 1: ${titulos.join(' | ') || 'vacía'}). Esos datos no se guardan; agrega la columna en la pestaña ORIGINAL si los quieres.`;
+        console.warn('[sheets]', msg);
+        reportarFalla(new Error(msg), { level: 'warning', step: 'guardar en Google Sheets (columnas)', hoja: spreadsheetId });
+    }
+    return fila;
+}
+
+async function addRowToSheet(auth, spreadsheetId, datos, sheetName) {
     // Sin try/catch aquí: si falla, appendToSheet lo explica y lo reporta al CRM.
-    const response = (await sheets.spreadsheets.values.append(request)).data;
-    return response;
+    return enSerie(`${spreadsheetId}|${sheetName}`, async () => {
+        const values = Array.isArray(datos) ? datos : await filaPorEncabezados(auth, spreadsheetId, sheetName, datos);
+        const fila = await primeraFilaLibre(auth, spreadsheetId, sheetName);
+        const response = await sheets.spreadsheets.values.update({
+            spreadsheetId,
+            range: rango(sheetName, `A${fila}`),
+            valueInputOption: 'RAW',
+            resource: { values: [values] },
+            auth,
+        });
+        return response.data;
+    });
 }
 
 const appendToSheet = async (data, spreadsheetId) => {
@@ -189,7 +259,7 @@ const appendToSheet = async (data, spreadsheetId) => {
         // v3.4: el pedido, la reserva o la encuesta no quedó en la hoja de cálculo.
         const falla = explicarErrorSheets(error, spreadsheetId);
         console.error('[sheets]', falla.message);
-        reportarFalla(falla, { level: 'warning', step: 'guardar en Google Sheets', hoja: spreadsheetId || 'vacía', fila: Array.isArray(data) ? data.slice(0, 4).join(' | ') : undefined });
+        reportarFalla(falla, { level: 'warning', step: 'guardar en Google Sheets', hoja: spreadsheetId || 'vacía', fila: (Array.isArray(data) ? data : Object.values(data ?? {})).slice(0, 4).join(' | ') });
     }
 };
 
