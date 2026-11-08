@@ -277,7 +277,7 @@ export async function enviarTarjetas(to, tarjetas, texto = '') {
       });
       return true;
     }
-    if (tarjetas.length <= MAX_CARRUSEL && config.TARJETAS_CARRUSEL) {
+    if (tarjetas.length <= MAX_CARRUSEL) {
       await enviar(to, {
         type: 'carousel',
         body: { text: body },
