@@ -86,6 +86,8 @@ export default {
   RECORDATORIO_PEDIDO_MIN: Number(process.env.RECORDATORIO_PEDIDO_MIN) || 5, // cada cuántos minutos se recuerda
   RECORDATORIO_PEDIDO_MAX: Number(process.env.RECORDATORIO_PEDIDO_MAX ?? 2),  // cuántas veces como máximo (0 = nunca)
   ADICIONAL_MINUTOS: Number(process.env.ADICIONAL_MINUTOS) || 60,           // ventana para sumar un adicional a un pedido enviado
+  // Carrusel de productos (2 a 10 tarjetas). TARJETAS_CARRUSEL=false → se usa la lista de productos con carrito.
+  TARJETAS_CARRUSEL: !/^(0|false|no)$/i.test(process.env.TARJETAS_CARRUSEL || 'true'),
   // Números a los que el bot NO responde (p. ej. el personal del restaurante que escribe a la línea).
   NO_RESPONDER_A: (process.env.NO_RESPONDER_A || '').split(',').map((n) => n.replace(/\D/g, '')).filter(Boolean),
   LOGGRO_TABLE_ID: process.env.LOGGRO_TABLE_ID,               // mesa "Domicilios/WhatsApp" en Loggro

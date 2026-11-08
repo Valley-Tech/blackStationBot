@@ -301,6 +301,23 @@ class MessageHandler {
     await whatsappService.sendInteractiveButtons(to, menuMessage, buttons);
   }
 
+  /**
+   * v3.5.1: un Flow sin su ID en Railway lo rechaza Meta (#131009, "falta flow_id").
+   * En vez de mandarlo roto, se avisa al cliente, se reporta la falla al CRM y no se envía.
+   */
+  async flowSinConfigurar(to, variable, tipo) {
+    console.error(`[flows] ${variable} vacío: configura el Flow de ${tipo} en Railway.`);
+    reportarFalla(new Error(`${variable} vacío en Railway: no se puede enviar el Flow de ${tipo} (Meta lo rechaza con #131009 por falta de flow_id)`), { to, level: 'error', step: `enviar el Flow de ${tipo}` });
+    if (tipo === 'encuesta') {
+      await whatsappService.sendMessage(to, '¡Gracias por tu tiempo! 😊 Por ahora la encuesta no está disponible.');
+      return null;
+    }
+    await whatsappService.sendMessage(to, tipo === 'pedido'
+      ? 'Tuvimos un problema para abrir el formulario del pedido 😔. Escribe *asesor* y una persona toma tu pedido ya mismo.'
+      : 'Tuvimos un problema para abrir el formulario de reservas 😔. Escribe *asesor* y una persona hace tu reserva.');
+    return null;
+  }
+
   async menuPedido(to, textos = {}) {
     const action = {
       name: "flow",
@@ -311,7 +328,7 @@ class MessageHandler {
         "flow_cta": "Pedido"
       },
     }
-    if (!config.FLOW_ID_PEDIDO) console.error('[flows] FLOW_ID_PEDIDO vacío: configura el Flow de pedido en Railway.');
+    if (!config.FLOW_ID_PEDIDO) return this.flowSinConfigurar(to, 'FLOW_ID_PEDIDO', 'pedido');
     return await whatsappService.sendFlow(to, action, textos);
   }
 
@@ -325,7 +342,7 @@ class MessageHandler {
         "flow_cta": "Reserva"
       },
     }
-    if (!config.FLOW_ID_RESERVA) console.error('[flows] FLOW_ID_RESERVA vacío: configura el Flow de reserva en Railway.');
+    if (!config.FLOW_ID_RESERVA) return this.flowSinConfigurar(to, 'FLOW_ID_RESERVA', 'reserva');
     return await whatsappService.sendFlowReserva(to, action);
   }
 
@@ -473,7 +490,7 @@ class MessageHandler {
         "flow_cta": "Encuesta"
       },
     }
-    if (!config.FLOW_ID_ENCUESTA) console.error('[flows] FLOW_ID_ENCUESTA vacío: configura el Flow de encuesta en Railway.');
+    if (!config.FLOW_ID_ENCUESTA) return this.flowSinConfigurar(to, 'FLOW_ID_ENCUESTA', 'encuesta');
     return await whatsappService.sendFlowEncuesta(to, action);
   }
 
