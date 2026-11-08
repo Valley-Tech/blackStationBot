@@ -222,13 +222,18 @@ export async function buscarPlatos(to, texto) {
 
 const enviar = (to, interactive) => sendToWhatsApp({ messaging_product: 'whatsapp', recipient_type: 'individual', to, type: 'interactive', interactive });
 
+/**
+ * Texto que acompaña las tarjetas. v3.5.2: en UNA sola línea, sin asteriscos ni saltos de línea:
+ * es el formato de los ejemplos de Meta para el carrusel ("Secuencia de productos"), que funcionó
+ * en Postman; el texto con saltos de línea dobles y *negritas* es el que Meta rechazó (#131009).
+ */
 function textoCuerpo(tarjetas, texto) {
   const cantidad = cantidadPedida(texto);
   const variantes = tarjetas.some((t) => t.conVariantes);
   const n = tarjetas.length;
-  const intro = n === 1 ? '¡Aquí la tienes! 👇' : `Encontré ${n} opciones para ti 👇${n > 2 ? '\nDesliza ➡️ para verlas todas.' : ''}`;
-  const pasos = `Toca *Ver*${variantes ? ', elige el tipo o el tamaño' : ''} y agrégala al carrito 🛒${cantidad && cantidad > 1 ? ` (pon la cantidad: *${cantidad}*)` : ''}.`;
-  return `${intro}\n\n${pasos}\nCuando tengas todo, envía el carrito y te confirmo el pedido 😊`;
+  const intro = n === 1 ? '¡Aquí la tienes! 👇' : `Encontré ${n} opciones para ti 👇${n > 2 ? ' Desliza para verlas todas.' : ''}`;
+  const pasos = `Toca Ver${variantes ? ', elige el tipo o el tamaño' : ''} y agrégala al carrito 🛒${cantidad && cantidad > 1 ? ` (pon la cantidad: ${cantidad})` : ''}.`;
+  return `${intro} ${pasos} Cuando tengas todo, envía el carrito y te confirmo el pedido 😊`;
 }
 
 export async function enviarTarjetas(to, tarjetas, texto = '') {
@@ -244,15 +249,16 @@ export async function enviarTarjetas(to, tarjetas, texto = '') {
         type: 'product',
         body: { text: body },
         footer: { text: tarjetas[0].marca || 'La Estación Parrilla Bar' },
-        action: { catalog_id: config.CATALOG_ID, product_retailer_id: tarjetas[0].id },
+        action: { catalog_id: String(config.CATALOG_ID), product_retailer_id: String(tarjetas[0].id) },
       });
       return true;
     }
-    if (tarjetas.length <= MAX_CARRUSEL && config.TARJETAS_CARRUSEL) {
+    // El carrusel exige entre 2 y 10 tarjetas ("must contain a minimum of 2 and maximum of 10 cards").
+    if (tarjetas.length >= 2 && tarjetas.length <= MAX_CARRUSEL && config.TARJETAS_CARRUSEL) {
       await enviar(to, {
         type: 'carousel',
         body: { text: body },
-        action: { cards: tarjetas.map((t, i) => ({ card_index: i, type: 'product', action: { product_retailer_id: t.id, catalog_id: config.CATALOG_ID } })) },
+        action: { cards: tarjetas.map((t, i) => ({ card_index: i, type: 'product', action: { product_retailer_id: String(t.id), catalog_id: String(config.CATALOG_ID) } })) },
       });
       return true;
     }
