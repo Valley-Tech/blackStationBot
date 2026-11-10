@@ -10,7 +10,7 @@ import { esDomicilio, valorDomicilio, entregaTexto, variablesReserva, horaReserv
 import { downloadImageFromMeta } from './httpRequest/sendToWhatsApp.js';
 import { uploadToPublicStorage } from './awsS3Service.js';
 import { sesion, tokenFlow, nuevoPedido, obtenerSesion } from './sesiones.js';
-import { separarSaludo, esCortesia, esCancelar, esPreguntaGeneral, turnoActual, dentroDeHorario } from './conversacion.js';
+import { separarSaludo, esCortesia, esCancelar, esPreguntaGeneral, turnoActual, dentroDeHorario, esPeticionDeProducto } from './conversacion.js';
 import { buscarPlatos, enviarTarjetas, hablaDePlatos, textoSinFoto } from './busquedaPlatos.js';
 import { product_names, CATALOGOS, areaPorId, grupoPorId, precios, nombrePorId } from '../data/catalogo.js';
 import config from '../config/env.js';
@@ -1005,12 +1005,14 @@ class MessageHandler {
     if (this.assistandState[from] || esPreguntaGeneral(t)) return this.handleAssistandFlow(from, t, { botones: pregunta });
 
     // Platos: la IA completa el nombre y se muestran las tarjetas del catálogo.
+    // v3.6: "¿qué hamburguesas tienes?", "¿tienen malteadas?" piden un producto: solo tarjetas, sin texto de la IA.
+    const pideProducto = !pregunta || esPeticionDeProducto(t);
     if (hablaDePlatos(t)) {
       const { tarjetas, sinFoto } = await buscarPlatos(from, t);
       const carta = this.cartaPorTexto(lower);
-      if (tarjetas.length > 10 && carta && !pregunta) return this.handleMenuOption(from, `cat:${carta}`); // "quiero una pizza" → la carta completa
+      if (tarjetas.length > 10 && carta && pideProducto) return this.handleMenuOption(from, `cat:${carta}`); // "quiero una pizza" → la carta completa
       if (tarjetas.length) {
-        if (pregunta) {
+        if (!pideProducto) {
           // "¿la hawaiana tiene piña?": responde la IA y debajo quedan las tarjetas para pedir.
           const respuesta = await geminiService(t, from);
           if (respuesta) await whatsappService.sendMessage(from, respuesta);
@@ -1018,7 +1020,7 @@ class MessageHandler {
         await enviarTarjetas(from, tarjetas, t);
         return;
       }
-      if (sinFoto?.length && !pregunta) {
+      if (sinFoto?.length && pideProducto) {
         // Lo pidió, pero todavía no tiene foto en Meta (no sale en el catálogo de WhatsApp).
         await whatsappService.sendMessage(from, textoSinFoto(sinFoto));
         return;

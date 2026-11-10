@@ -105,6 +105,20 @@ function puntaje(t, ws) {
   return best;
 }
 
+// v3.6: sinónimos — cómo lo escribe el cliente → cómo se llama en la carta.
+// "hamburguesas" también encuentra "Clasic Burger", "Samuelito Burger"…; "hot dog" → "perro".
+const SINONIMOS_BASE = {
+  hamburguesa: ['burger'], burger: ['hamburguesa'], hamburgesa: ['burger', 'hamburguesa'],
+  perro: ['hotdog'], hotdog: ['perro'], dog: ['perro'],
+  sanduche: ['sandwich'], sanduch: ['sandwich'], sandwiche: ['sandwich'], sanwich: ['sandwich'],
+  batido: ['malteada'], milkshake: ['malteada'], malteda: ['malteada'],
+  gaseosa: ['soda'], refresco: ['gaseosa', 'soda'], pola: ['cerveza'], birra: ['cerveza'],
+};
+const SINONIMOS = new Map(Object.entries(SINONIMOS_BASE).map(([k, v]) => [raiz(normalizar(k)), v.map((w) => raiz(normalizar(w)))]));
+const alternativas = (t) => [t, ...(SINONIMOS.get(t) ?? [])];
+/** Puntaje de la palabra del cliente o de sus sinónimos. */
+const puntajeSin = (t, ws) => Math.max(...alternativas(t).map((a) => puntaje(a, ws)));
+
 export function terminos(texto) {
   return palabras(texto).filter((w) => !STOP.has(w) && !/^\d+$/.test(w));
 }
@@ -117,17 +131,22 @@ export function buscarLocal(texto) {
   for (const e of INDICE.values()) {
     let score = 0;
     let especifico = false;
+    let directo = 0; // palabras que coinciden tal cual (sin sinónimo): "hamburguesas" → primero las "Hamburguesa…"
     for (const t of ts) {
+      if (puntaje(t, e.palabras) >= 2) directo += 1;
       // La sección de la carta ("Salchipapas") cuenta un poco menos que el nombre del plato.
-      const p = Math.max(puntaje(t, e.palabras), 0.8 * puntaje(t, e.palabrasSeccion));
+      const p = Math.max(puntajeSin(t, e.palabras), 0.8 * puntajeSin(t, e.palabrasSeccion));
       if (p > 0) { score += p; if (!GENERICAS.has(t)) especifico = true; }
     }
-    if (score > 0 && especifico) res.push({ e, score });
+    if (score > 0 && especifico) res.push({ e, score, directo });
   }
   if (!res.length) return [];
-  res.sort((a, b) => b.score - a.score || (a.e.precio ?? 0) - (b.e.precio ?? 0));
+  res.sort((a, b) => b.score - a.score || b.directo - a.directo || (a.e.precio ?? 0) - (b.e.precio ?? 0));
   const tope = res[0].score;
-  return res.filter((r) => r.score >= Math.max(2, tope * 0.7));
+  // Si un plato ganó solo ("hamburguesa ranchera"), no se suman los que solo coinciden por sinónimo
+  // ("Patacón Burger Ranchero"). Si hay empate ("hamburguesas"), se dejan todas las opciones.
+  const empate = res.filter((r) => r.score >= tope - 0.01).length >= 2;
+  return res.filter((r) => r.score >= Math.max(2, tope * 0.7) && (empate || r.directo >= res[0].directo));
 }
 
 // Palabras que nombran un TIPO de plato (primera palabra de cada nombre, grupo o sección de la carta):
@@ -144,7 +163,7 @@ export function hablaDePlatos(texto) {
   const res = buscarLocal(texto);
   if (!res.length) return false;
   const ts = terminos(texto);
-  if (ts.some((t) => puntaje(t, [...PLATOS]) >= 2)) return true;
+  if (ts.some((t) => puntajeSin(t, [...PLATOS]) >= 2)) return true;
   return INTENCION.test(normalizar(texto));
 }
 
@@ -187,7 +206,10 @@ function armar(ids, texto) {
     const hermanos = [...INDICE.values()].filter((e) => e.seccion === seccion);
     // Genérica = todo lo que escribió el cliente es el nombre de la sección ("salchipapas"),
     // no un plato concreto ("salchipapa mixta", "jugo de mora").
-    const generica = ts.length > 0 && ts.every((t) => puntaje(t, hermanos[0]?.palabrasSeccion ?? []) >= 2);
+    // v3.6: y además el título de la sección no tiene otras palabras: "malteadas" no trae los postres
+    // de "POSTRES y MALTEADAS", pero "salchipapas" sí trae la sección "Salchipapas" completa.
+    const ps = hermanos[0]?.palabrasSeccion ?? [];
+    const generica = ts.length > 0 && ts.every((t) => puntajeSin(t, ps) >= 2) && ps.every((w) => ts.some((t) => puntajeSin(t, [w]) >= 2));
     const tarjetasSeccion = new Set(hermanos.map(clave));
     if (generica && tarjetasSeccion.size <= MAX_CARRUSEL) for (const e of hermanos) if (!tarjetas.has(clave(e))) agregar(e, false);
   }
@@ -229,6 +251,13 @@ let avisoSinCatalogo = false;
  */
 export async function buscarPlatos(to, texto) {
   const local = buscarLocal(texto);
+  // v3.6: ¿pidió el plato SIN decir cuál? ("quiero malteada", "3 hamburguesas", "opciones de perros"):
+  // varios productos empatan en el mejor puntaje → se muestran TODAS las opciones (carrusel),
+  // aunque la IA del CRM haya escogido solo una. Si nombró uno ("malteada de oreo",
+  // "samuelito burger"), ese gana solo y sale en una tarjeta.
+  const tope = local[0]?.score ?? 0;
+  const opciones = local.filter((x) => x.score >= tope - 0.01).map((x) => x.e.id);
+  const generica = opciones.length >= 2;
   let ids = [];
   let fuente = null;
   const r = await searchProducts(to, texto, { limit: 20 });
@@ -239,7 +268,8 @@ export async function buscarPlatos(to, texto) {
     avisoSinCatalogo = true;
     console.warn('[platos] la búsqueda con IA del CRM no está disponible: se usa la búsqueda local. Sube docs/productos-crm-blackstation.csv al CRM (Chatbots → IA y conocimiento → Catálogo de productos) y activa la IA.');
   }
-  if (!ids.length && local.length) { ids = local.map((x) => x.e.id); fuente = 'local'; }
+  if (generica) { ids = [...new Set([...opciones, ...ids])]; fuente = fuente ?? 'local'; }
+  else if (!ids.length && local.length) { ids = local.map((x) => x.e.id); fuente = 'local'; }
   await asegurarFotos(relacionados(ids)); // ¿las fotos existen de verdad? (máx. 3 s, con caché)
   const { tarjetas, sinFoto } = armar(ids, texto);
   return { tarjetas, sinFoto, fuente };

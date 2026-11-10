@@ -79,6 +79,21 @@ export const esCancelar = (texto) => /^(cancelar|cancela|cancelo|anular|ya no( l
  */
 export const esPreguntaGeneral = (texto) => /\b(demora|demoran|tarda|tardan|falta|llega|llegan|tiempo|minutos|ya viene|ya va|abren|abierto|abiertos|cierran|horario|servicio|ubicad|direccion|nequi|daviplata|transferencia|qr|cuenta|pagar|pago|cuanto (vale|cuesta) el domicilio|mi pedido|reserv)/.test(normalizar(texto));
 
+/**
+ * v3.6: ¿el cliente está PIDIENDO o buscando un producto (aunque escriba "¿" o "qué")?
+ * "¿Qué hamburguesas tienes disponibles?", "qué opciones de perros tienen", "¿tienen malteadas?",
+ * "muéstrame las hamburguesas", "me gustaría una malteada", "para pedir 2 perros" → sí:
+ * se muestran las tarjetas sin la respuesta de texto de la IA.
+ * "¿la Samuelito Burger qué trae?", "¿cuánto se demora?", "¿cuál me recomiendas?" → no:
+ * son preguntas sobre el plato; responde la IA y debajo quedan las tarjetas.
+ */
+const PIDE_PRODUCTO = /\b(quiero|quisiera|queremos|me gustaria|nos gustaria|me (regala|regalas|regalan|da|das|dan|trae|traes|manda|mandas|vende|vendes)|regalame|dame|deme|mandame|traeme|pedir|ordenar|encargar|para llevar|muestrame|muestreme|mostrar|muestra|ensename|ver (las|los|la|el)|opciones|variedad|sabores|tipos de|clases de|disponibles?|tienen|tienes|hay|venden|vendes|manejan|ofrecen|que (\w+ )?(tienen|tienes|hay|venden|manejan))\b/;
+const PREGUNTA_DE_DETALLE = /\b(trae|traen|lleva|llevan|ingredientes?|contiene|preparan|picante|demora|demoran|tarda|tardan|tamano|cuantas personas|para cuantos|recomienda|recomiendas|recomiendan|mejor|diferencia|incluye|viene con|acompana|acompanan|es grande|es para|gramos|onzas|sin gluten|vegetarian)\b/;
+export const esPeticionDeProducto = (texto) => {
+  const t = normalizar(texto).replace(/[¿?¡!.,]/g, ' ');
+  return PIDE_PRODUCTO.test(t) && !PREGUNTA_DE_DETALLE.test(t);
+};
+
 /** "Quiero pedir", "para un domicilio": intención de pedir sin nombrar un plato. */
 export const quierePedirGenerico = (texto) => /\b(pedir|pedido|ordenar|orden|domicilio|comprar|menu del dia)\b/.test(normalizar(texto)) && !/\bmi pedido\b/.test(normalizar(texto));
 
