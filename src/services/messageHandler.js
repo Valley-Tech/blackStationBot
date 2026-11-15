@@ -603,27 +603,20 @@ class MessageHandler {
         ? `✅ ¡Adicional recibido! Lo sumamos a tu pedido.\n*Total del adicional:* ${cop(datosPedido.monto)} (pagas en efectivo al recibir) 🤗`
         : "✅¡Pedido recibido!\nPronto nos pondremos en contacto contigo! 🤗";
       // if (!adicional) await this.menuOpcionalHiring(to);
-    } else if (datosPedido.datos.pago === "PSE") {
+    } else if (datosPedido.datos.pago === "Codigo QR") {
       try {
-        userOrderDataMap[to] = {
-          ...datosPedido.datos,
-          address: entrega,
-          monto: datosPedido.monto,
-          pedidoStr: pedidoStrTemplate
-        };
-        // Generar enlace de pago WOMPI (con el domicilio incluido si aplica)
-        const idlink = await createWompiPaymentLink(
-          datosPedido.monto * 100, // Monto en centavos
-          "COP",
-          pedidoStr
-        );
-        transactionToPhoneMap[idlink] = to;
-        response = `*Resumen de tu pedido*🛒:\n\n${pedidoStr}\n*Total:* $${datosPedido.monto.toLocaleString('es-CO')} COP\n\nUtiliza el siguiente *link de pago*:\n\nhttps://checkout.wompi.co/l/${idlink}\n\nLuego de realizar el pago espera unos segundos y automáticamente te lo confirmamos! 😊`;
-      } catch (error) {
-        response = "Hubo un problema al generar el enlace de pago. Por favor, intenta nuevamente.";
-        // v3.4: el cliente quería pagar con PSE y no recibió el link.
-        reportarFalla(error, { to, step: 'generar el link de pago de Wompi (PSE)', monto: datosPedido.monto, pedido: pedidoStrTemplate });
-      }
+          userOrderDataMap[to] = {
+            ...datosPedido.datos,
+            monto: datosPedido.monto,
+            pedidoStr: pedidoStrTemplate
+          };
+          // Enviar imagen de codigo QR con sendmediaMessage
+          await this.sendMediaQR(to);
+          response = `*Resumen de tu compra*🛒:\n\n${pedidoStr}\n*Total:* $${datosPedido.monto.toLocaleString('es-CO')} COP`;
+          sesion(to).esperandoComprobante = true;
+        } catch (error) {
+          response = "Hubo un problema al enviar el código QR. Por favor, intenta nuevamente.";
+        }
     } else if (datosPedido.datos.pago === "Transferencia") {
       userOrderDataMap[to] = {
         ...datosPedido.datos,
@@ -796,6 +789,14 @@ class MessageHandler {
     for (const c of cartas) {
       await whatsappService.sendMediaMessage(to, 'document', c.url, c.caption, c.filename);
     }
+  }
+
+  async sendMediaQR(to) {
+    const mediaUrl = 'https://micarta.s3.us-east-1.amazonaws.com/QR-La+Estacion.jpeg';
+    const caption = '¡Envíanos el comprobante de la transferencia (captura) para confirmar tu pedido 😊!';
+    const type = 'image';
+
+    await whatsappService.sendMediaMessage(to, type, mediaUrl, caption);
   }
 
   async sendMediaEvento(to) {
