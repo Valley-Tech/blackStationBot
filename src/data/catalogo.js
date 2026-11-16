@@ -403,6 +403,7 @@ export const precios = {
   "Pizza Toxi-Queso (4 porciones)": 19000,
   "Pizza Toxi-Queso (6 porciones)": 27000,
   "Pizza Toxi-Queso (8 porciones)": 42000,
+  "Pizza Toxi-Queso (12 porciones)": 64000,
   "Pizza Pollo y Champiñón (4 porciones)": 19000,
   "Pizza Pollo y Champiñón (6 porciones)": 27000,
   "Pizza Pollo y Champiñón (8 porciones)": 42000,
