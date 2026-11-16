@@ -252,7 +252,7 @@ class MessageHandler {
   async sendWelcomeMessage(to, messageId, senderInfo) {
     try {
       const name = this.firstName(senderInfo);
-      const welcomeMessage = `¡Hola 👋 ${name}!\nBienvenid@ a ${negocio.bienvenida}\n\n¿En qué te puedo ayudar? 😊\n\nEscribe *ayuda* si la necesitas`;
+      const welcomeMessage = `¡Hola 👋 ${name}!\nSoy tu nuevo asistente virtual de ${negocio.bienvenida}\n\n¿En qué te puedo ayudar? 😊`;
       await whatsappService.sendMessage(to, welcomeMessage, messageId);
     } catch (error) {
       logAxiosError('sendWelcomeMessage', error);
@@ -343,16 +343,16 @@ class MessageHandler {
       {
         title: 'La Estación Parrilla',
         rows: [
-          { id: 'cat:parrilla_asados', title: 'Asados y Picadas 🔥', description: 'Asados al carbón y picadas para compartir' },
-          { id: 'cat:parrilla_rapidas', title: 'Salchipapas y Burgers', description: 'Salchipapas, hamburguesas y hot dogs' },
-          { id: 'cat:parrilla_patacones', title: 'Patacones y Sándwiches', description: 'María casquito, patacones, desgranados y sándwiches' },
+          { id: 'cat:parrilla_asados', title: 'Asados y Picadas 🔥'},
+          { id: 'cat:parrilla_rapidas', title: 'Salchipapas y Burgers'},
+          { id: 'cat:parrilla_patacones', title: 'Patacones y Sándwiches'},
         ],
       },
       {
         title: "Black's Pizza",
         rows: [
-          { id: 'cat:pizzas', title: 'Pizzas 🍕', description: config.VARIANTES_META ? 'Todos los sabores · el tamaño lo eliges en cada pizza' : 'Elige el tamaño: 4, 6, 8 o 12 porciones' },
-          { id: 'cat:pizzeria_otros', title: 'Panzerottis y Lasañas', description: 'Panzerottis horneados y lasañas gratinadas' },
+          { id: 'cat:pizzas', title: 'Pizzas 🍕'},
+          { id: 'cat:pizzeria_otros', title: 'Panzerottis y Lasañas'},
         ],
       },
     ];
@@ -360,15 +360,15 @@ class MessageHandler {
       {
         title: 'Heladería Yellow',
         rows: [
-          { id: 'cat:heladeria_helados', title: 'Helados y Postres 🍨', description: 'Helado a la plancha, copas, waffles y más' },
-          { id: 'cat:heladeria_malteadas', title: 'Malteadas y Frappés', description: config.VARIANTES_META ? 'Malteadas, frappés, smoothies · elige el sabor adentro' : 'Malteadas, frappés, smoothies y menú infantil' },
-          { id: 'cat:heladeria_jugos', title: 'Jugos y Micheladas 🍹', description: config.VARIANTES_META ? 'Jugos, limonadas y micheladas · elige el sabor adentro' : 'Jugos naturales, limonadas y micheladas' },
+          { id: 'cat:heladeria_helados', title: 'Helados y Postres 🍨' },
+          { id: 'cat:heladeria_malteadas', title: 'Malteadas y Frappés' },
+          { id: 'cat:heladeria_jugos', title: 'Jugos y Micheladas 🍹' },
         ],
       },
       {
         title: 'Bebidas',
         rows: [
-          { id: 'cat:bebidas', title: 'Gaseosas y Cervezas 🍺', description: 'Gaseosas, agua, jugos Hit, maltas y cervezas' },
+          { id: 'cat:bebidas', title: 'Gaseosas y Cervezas 🍺'},
         ],
       },
     ];
@@ -1145,7 +1145,7 @@ class MessageHandler {
   async pedirConfirmacion(to, { modo = 'nuevo' } = {}) {
     const s = sesion(to);
     const intro = modo === 'agregar' ? '✅ Listo, lo agregué.\n\n' : modo === 'reemplazar' ? '✅ Listo, cambié tu pedido.\n\n' : '';
-    const domicilio = negocio.domicilio ? `\n_(Si es a domicilio se suman ${cop(negocio.domicilio)})_` : '';
+    const domicilio = negocio.domicilio;
     const texto = `${intro}*Tu pedido* 🛒\n\n${s.pedidoStr}\n\n*Subtotal:* ${cop(s.datosPedido?.monto)}${domicilio}\n\n¿Está todo bien?`;
     await whatsappService.sendInteractiveButtons(to, texto.slice(0, 1024), BOTONES_CONFIRMAR);
   }

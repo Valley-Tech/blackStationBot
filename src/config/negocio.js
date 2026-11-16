@@ -7,7 +7,7 @@ import config from './env.js';
 export default {
   nombre: 'La Estación Parrilla Bar',
   marcas: "La Estación Parrilla Bar · Black's Pizza · Heladería Yellow",
-  bienvenida: '*La Estación Parrilla Bar* 🔥🍖\n🍕 *Black\'s Pizza*  ·  🍨 *Heladería Yellow*',
+  bienvenida: '*La Estación* 🔥🍔🌭🥩🍖🍕',
 
   // Horario de atención del chatbot para pedidos (hora Colombia). ⚠️ confirmar.
   horario: { apertura: config.HORA_APERTURA, cierre: config.HORA_CIERRE },
