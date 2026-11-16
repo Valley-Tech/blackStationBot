@@ -47,3 +47,22 @@ El cliente escribe lo que quiere ("me regalas 3 salchipapas", "una piza hawaiana
 6. **Cambios después de llenar el Flow** (quitar algo de un pedido que ya está en cocina): los atiende un asesor.
 
 Los recordatorios viven en la memoria del bot: si Railway reinicia el servicio, los pendientes no se envían.
+
+## v3.7 · Pizzas combinadas (2 o 3 sabores en una bandeja)
+
+Reglas: 4 y 6 porciones → 2 sabores mitad y mitad (2+2 / 3+3). 8 porciones → 2 sabores (4+4) o 3 (4+2+2).
+12 porciones → 2 sabores (6+6) o 3 (4+4+4). Se cobra el precio del sabor más caro (en ese tamaño).
+A Loggro va UNA línea con el producto del sabor que fija el precio y la nota
+`COMBINADA 8 porciones: 4 Hawaiana + 2 Mexicana + 2 Ranchera` (más la recomendación del cliente).
+
+Cómo se dispara (`src/services/pizzasCombinadas.js` + sección "Pizzas combinadas" de messageHandler.js):
+- "pizza de 4 mitad hawaiana y mitad mexicana", "hawaiana y ranchera", "de 2 sabores" → se arma de una vez
+  y solo se pregunta lo que falte (tamaño con lista; nº de sabores con botones en 8 y 12; sabores por texto).
+- "quiero una pizza" → botones *Sí, combinar / No, ver la carta*. "carta/menú de pizzas" → la carta y luego la pregunta.
+- "pizza hawaiana de 8" (un sabor) → la tarjeta y "¿La quieres combinada con otro sabor?".
+- Carrito con pizzas de un sabor → por cada línea "¿Deseas combinar las porciones?" antes de "¿Está todo bien?".
+  Con cantidad > 1: "¿Las 2 iguales o solo una?". La pizza combinada reemplaza la línea (o parte de ella).
+- "pollo" / "queso" solos son ambiguos → lista para elegir el sabor. Sabores repetidos, sabor sin ese tamaño
+  (Toxi-Queso de 12 no tiene precio) y más sabores de los permitidos se avisan y se corrigen.
+- Resumen con botones *Agregar al pedido / Cambiar sabores / Cancelar*; "cancelar" por texto también.
+- Preguntas de detalle ("¿la hawaiana tiene piña?") siguen yendo a la IA con las tarjetas debajo.

@@ -12,6 +12,7 @@ import { uploadToPublicStorage } from './awsS3Service.js';
 import { sesion, tokenFlow, nuevoPedido, obtenerSesion } from './sesiones.js';
 import { separarSaludo, esCortesia, esCancelar, esPreguntaGeneral, turnoActual, dentroDeHorario, esPeticionDeProducto } from './conversacion.js';
 import { buscarPlatos, enviarTarjetas, hablaDePlatos, textoSinFoto } from './busquedaPlatos.js';
+import { leerPedidoPizza, hablaDePizza, quiereCombinar, armarItem, validar, textoResumen, textoSabores, precioCombinada, maxSabores, repartoDe, esPizza, PIZZA_POR_ID, SABORES, TAMANOS, REPARTOS, cop } from './pizzasCombinadas.js';
 import { product_names, CATALOGOS, areaPorId, grupoPorId, precios, nombrePorId } from '../data/catalogo.js';
 import config from '../config/env.js';
 import negocio from '../config/negocio.js';
@@ -42,7 +43,6 @@ function isWithinBusinessHours() {
   return dentroDeHorario();
 }
 
-const cop = (n) => `$${Number(n || 0).toLocaleString('es-CO')}`;
 
 // Botones del paso "confirmar pedido" (máx. 20 caracteres por botón).
 const BOTONES_CONFIRMAR = [
@@ -94,7 +94,7 @@ class MessageHandler {
           await whatsappService.markAsRead(message.id);
           return;
         }
-        if (/^(ped_|cart_|ad_)/.test(boton ?? '')) return this.handleMenuOption(from, boton);
+        if (/^(ped_|cart_|ad_|pzc?_)/.test(boton ?? '')) return this.handleMenuOption(from, boton);
       }
       if (isWithinBusinessHours()) {
         if (message?.type === 'text') {
@@ -497,6 +497,8 @@ class MessageHandler {
 
   async handleMenuOption(to, option) {
     let response;
+    // v3.7: botones y listas de pizzas combinadas (pz_*, pzc_*).
+    if (typeof option === 'string' && /^pzc?_/.test(option) && await this.botonPizza(to, option)) return;
     // v3.5: confirmar / agregar / cambiar el pedido y adicionales.
     switch (option) {
       case 'ped_ok': return this.confirmarPedido(to);
@@ -511,6 +513,7 @@ class MessageHandler {
     if (typeof option === 'string' && option.startsWith('cat:')) {
       const key = option.slice(4);
       if (key === 'pizzas') {
+        sesion(to).vioPizzasAt = Date.now(); // v3.7: contexto para "me la puedes hacer de 2 sabores"
         // Con variantes: un solo catálogo con todos los sabores (el tamaño se elige en cada pizza).
         if (!config.VARIANTES_META) return this.menuPizzas(to);
         const enviado = await this.menuCarta(to, 'pizzas_4', { header: "Pizzas Black's 🍕 · elige el tamaño en cada una" });
@@ -829,7 +832,7 @@ class MessageHandler {
       waiterOrderArea: areaPorId[item.product_retailer_id] ?? null,
       quantity: item.quantity,
       unit_price: item.item_price,
-      notes: data.recomendacion || ""
+      notes: [item.nota, data.recomendacion].filter(Boolean).join(' · ') // v3.7: "COMBINADA 8 porciones: 4 Hawaiana + 2 Mexicana + 2 Ranchera"
     }));
 
     // Si hay domicilio y existe el producto "Domicilio" en Loggro, va como un producto más.
@@ -991,11 +994,13 @@ class MessageHandler {
       if (this.pedidoPendiente(from)) await this.recordarPedido(from);
       return;
     }
+    // v3.7: está armando una pizza combinada → sus respuestas (sabores, tamaño, "cancelar") van ahí.
+    if (s.combo) return this.atenderComboTexto(from, t);
     if (esCancelar(t) && this.pedidoPendiente(from)) return this.cancelarPedido(from);
 
     // Palabras clave (igual que antes).
     if (lower === 'ayuda') return this.helpMenu(from);
-    if (lower.includes('carta')) return this.sendMedia(from);
+    if (lower.includes('carta') && !this.esPedidoDePizza(lower)) return this.sendMedia(from); // v3.7: "carta de pizzas" va a pizzas
     if (/\bmen[uú]\b/.test(lower) && !hablaDePlatos(t)) return this.catalogo(from);
     if (lower === 'ubicacion' || lower === 'ubicación') return this.sendLocation(from);
     if (lower === 'asesor') return this.sendContact(from);
@@ -1008,6 +1013,10 @@ class MessageHandler {
     // Platos: la IA completa el nombre y se muestran las tarjetas del catálogo.
     // v3.6: "¿qué hamburguesas tienes?", "¿tienen malteadas?" piden un producto: solo tarjetas, sin texto de la IA.
     const pideProducto = !pregunta || esPeticionDeProducto(t);
+    // v3.7: pizzas → combinar sabores (o preguntar si quiere combinar) antes de la búsqueda normal.
+    // "me la puedes hacer de 2 sabores" sin decir "pizza": cuenta si acaba de ver las pizzas o tiene una en el pedido.
+    const contextoPizza = quiereCombinar(t) && ((s.vioPizzasAt && Date.now() - s.vioPizzasAt < 30 * 60000) || (s.productos ?? []).some((p) => esPizza(p.product_retailer_id)));
+    if ((this.esPedidoDePizza(lower) || contextoPizza) && !/\b(panzerott?is?|lasan)/.test(lower) && await this.atenderPizzaTexto(from, t, { pregunta, pideProducto })) return;
     if (hablaDePlatos(t)) {
       const { tarjetas, sinFoto } = await buscarPlatos(from, t);
       const carta = this.cartaPorTexto(lower);
@@ -1049,8 +1058,8 @@ class MessageHandler {
   /** Nombres y total de un carrito (los nombres salen de data/catalogo.js). */
   resumenCarrito(items) {
     const lineas = items.map((item) => {
-      const nombre = nombrePorId[item.product_retailer_id] || item.product_retailer_id;
-      if (!nombrePorId[item.product_retailer_id]) console.warn('[pedido] producto sin nombre en data/catalogo.js:', item.product_retailer_id);
+      const nombre = item.nombre || nombrePorId[item.product_retailer_id] || item.product_retailer_id; // v3.7: pizzas combinadas traen su nombre
+      if (!item.nombre && !nombrePorId[item.product_retailer_id]) console.warn('[pedido] producto sin nombre en data/catalogo.js:', item.product_retailer_id);
       return `${nombre} x${item.quantity}`;
     });
     const monto = items.reduce((t, i) => t + (Number(i.item_price) || 0) * (Number(i.quantity) || 1), 0);
@@ -1108,11 +1117,13 @@ class MessageHandler {
     const s = sesion(to);
     let lista = items;
     if (modo === 'agregar' && s.productos?.length) {
-      const porId = new Map(s.productos.map((i) => [i.product_retailer_id, { ...i }]));
+      // v3.7: una pizza combinada no se mezcla con la misma pizza de un solo sabor (clave = id + nota).
+      const clave = (i) => `${i.product_retailer_id}|${i.nota ?? ''}`;
+      const porId = new Map(s.productos.map((i) => [clave(i), { ...i }]));
       for (const i of items) {
-        const actual = porId.get(i.product_retailer_id);
+        const actual = porId.get(clave(i));
         if (actual) actual.quantity = (Number(actual.quantity) || 0) + (Number(i.quantity) || 0);
-        else porId.set(i.product_retailer_id, { ...i });
+        else porId.set(clave(i), { ...i });
       }
       lista = [...porId.values()];
     }
@@ -1122,6 +1133,10 @@ class MessageHandler {
     s.pedido = { estado: 'confirmar', creadoAt: Date.now(), recordatorios };
     s.carritoNuevo = null;
     s.modoCarrito = null;
+    // v3.7: si vienen pizzas de un solo sabor, primero "¿Deseas combinar las porciones?".
+    s.comboModo = modo;
+    if (await this.comboPreguntarCarrito(to)) { this.programarRecordatorio(to); return; }
+    s.comboModo = null;
     await this.pedirConfirmacion(to, { modo });
     this.programarRecordatorio(to);
   }
@@ -1259,6 +1274,356 @@ class MessageHandler {
   /** El cliente escribió: el recordatorio se cuenta desde ahora (no se le interrumpe mientras habla). */
   tocarSeguimiento(to) {
     if (temporizadores.has(to)) this.programarRecordatorio(to);
+  }
+
+  // ===========================================================================
+  //  v3.7 · Pizzas combinadas (2 o 3 sabores en una bandeja)
+  // ===========================================================================
+  //
+  //  Estado por cliente: s.combo = { paso, tamano, sabores, nSabores, cantidad, origen, linea }
+  //    paso: 'tamano' → 'nsabores' (solo 8 y 12) → 'sabores' → 'ambiguo' → 'resumen'
+  //    origen: 'texto' (lo pidió escribiendo) | 'carrito' (venía una pizza en el carrito; linea = índice)
+  //  Disparadores:
+  //    · texto con "mitad…", "2 sabores", o 2+ sabores → se arma de una vez (preguntando solo lo que falte);
+  //    · "quiero una pizza" (genérico) → botones "¿Deseas combinar?"; No → carta de pizzas;
+  //    · "carta/menú de pizzas" → la carta y después la pregunta;
+  //    · un sabor concreto ("pizza hawaiana de 8") → la tarjeta y la pregunta "¿la combinamos?";
+  //    · carrito con pizza(s) → por cada línea: "¿Deseas combinar las porciones?" antes de "¿Está todo bien?".
+  //  El resultado entra al pedido como un producto más (ID del sabor más caro + nota), así que
+  //  el Flow, el cobro, Sheets y Loggro no cambian.
+
+  /** ¿El texto habla de pizzas (y no es una pregunta de detalle)? */
+  esPedidoDePizza(lower) {
+    return hablaDePizza(lower);
+  }
+
+  /** Entrada desde el texto del cliente (lo llama responderTexto). Devuelve true si lo atendió. */
+  async atenderPizzaTexto(from, t, { pregunta, pideProducto }) {
+    const s = sesion(from);
+    const lower = normalizar(t);
+    const leido = leerPedidoPizza(t);
+    const pideCarta = /\b(carta|menu|muestra|muestrame|mostrar|ver|opciones|sabores|cuales|que pizzas|tienen)\b/.test(lower) && leido.sabores.length === 0;
+
+    // 1. Pidió combinar (o nombró 2+ sabores): se arma de una vez. ("queso" contiene "que" y isQuestion
+    //    lo toma como pregunta; aquí solo frena una pregunta de detalle: "¿la mitad hawaiana trae piña?").
+    const detalle = /\b(trae|traen|lleva|llevan|ingredientes?|contiene|demora|tarda|cuanto|precio|vale|recomiend)/.test(lower);
+    if ((pideProducto || !detalle) && (leido.combinar || leido.nSabores)) {
+      await this.iniciarCombo(from, { ...leido, origen: 'texto' });
+      return true;
+    }
+    // 2. Un sabor concreto: la tarjeta de siempre y "¿la combinamos?".
+    if (pideProducto && leido.sabores.length === 1 && !leido.ambiguos.length) {
+      const { tarjetas } = await buscarPlatos(from, t);
+      if (tarjetas.length) await enviarTarjetas(from, tarjetas, t);
+      s.vioPizzasAt = Date.now();
+      s.comboBorrador = { tamano: leido.tamano, sabores: leido.sabores, cantidad: leido.cantidad };
+      await whatsappService.sendInteractiveButtons(from, `¿La quieres *combinada* con otro sabor? 🍕 (mitad y mitad; la de 8 y 12 hasta 3 sabores)`, [
+        { type: 'reply', reply: { id: 'pz_si', title: 'Sí, combinar 🍕' } },
+        { type: 'reply', reply: { id: 'pz_no', title: 'No, un solo sabor' } },
+      ]);
+      return true;
+    }
+    if (!pideProducto) return false; // "¿la hawaiana tiene piña?" → IA + tarjetas, como siempre
+    // 3. Genérico: carta primero si la pidió; si no, la pregunta primero (No → la carta).
+    s.comboBorrador = { tamano: leido.tamano, sabores: [], cantidad: leido.cantidad };
+    if (pideCarta) await this.handleMenuOption(from, 'cat:pizzas');
+    await whatsappService.sendInteractiveButtons(from, pideCarta
+      ? '¿Deseas *combinar sabores* en tu pizza? 🍕 (mitad y mitad; la de 8 y 12 hasta 3 sabores)'
+      : '🍕 ¿Deseas *combinar sabores* en tu pizza? (mitad y mitad; la de 8 y 12 hasta 3 sabores)', [
+      { type: 'reply', reply: { id: 'pz_si', title: 'Sí, combinar 🍕' } },
+      { type: 'reply', reply: { id: 'pz_no', title: pideCarta ? 'No, un solo sabor' : 'No, ver la carta' } },
+    ]);
+    s.comboPreguntaCarta = !pideCarta;
+    return true;
+  }
+
+  /** Botones y listas pz_* / pzc_*. Devuelve true si el id era de pizzas. */
+  async botonPizza(to, id) {
+    const s = sesion(to);
+    if (id === 'pz_si') {
+      const b = s.comboBorrador ?? {};
+      s.comboBorrador = null;
+      return this.iniciarCombo(to, { ...b, origen: 'texto' }), true;
+    }
+    if (id === 'pz_no') {
+      const mostrarCarta = s.comboPreguntaCarta;
+      s.comboBorrador = null; s.comboPreguntaCarta = false;
+      if (mostrarCarta) await this.handleMenuOption(to, 'cat:pizzas');
+      else await whatsappService.sendMessage(to, 'Perfecto 👌 Agrégala al carrito 🛒 y envíalo cuando tengas todo.');
+      return true;
+    }
+    if (id.startsWith('pz_t:')) return this.comboTamano(to, Number(id.slice(5))), true;
+    if (id === 'pz_n2' || id === 'pz_n3') return this.comboNumeroSabores(to, Number(id.slice(4))), true;
+    if (id.startsWith('pz_s:')) return this.comboSaborElegido(to, id.slice(5)), true;
+    if (id === 'pz_ok') return this.comboConfirmar(to), true;
+    if (id === 'pz_cambiar') return this.comboReiniciarSabores(to), true;
+    if (id === 'pz_cancel') return this.comboCancelar(to), true;
+    if (id === 'pzc_si' || id === 'pzc_no') return this.comboRespuestaCarrito(to, id === 'pzc_si'), true;
+    if (id === 'pz_todas' || id === 'pz_una') return this.comboCantidadCarrito(to, id === 'pz_todas'), true;
+    return false;
+  }
+
+  /** Arranca (o continúa) la combinación con lo que ya se sabe y pregunta lo que falte. */
+  async iniciarCombo(to, { tamano = null, sabores = [], ambiguos = [], nSabores = null, cantidad = 1, origen = 'texto', linea = null } = {}) {
+    const s = sesion(to);
+    s.combo = { paso: null, tamano, sabores: [...sabores], ambiguos: [...ambiguos], nSabores, cantidad: cantidad || 1, origen, linea };
+    return this.comboSiguientePaso(to);
+  }
+
+  /** Decide qué falta y lo pregunta. */
+  async comboSiguientePaso(to) {
+    const s = sesion(to);
+    const c = s.combo;
+    if (!c) return;
+    if (c.ambiguos.length) return this.comboPreguntarAmbiguo(to);
+    if (!c.tamano) return this.comboPreguntarTamano(to);
+    const max = maxSabores(c.tamano);
+    if (max >= 3 && !c.nSabores && c.sabores.length < 2) return this.comboPreguntarNumeroSabores(to);
+    if (c.nSabores && c.nSabores > max) {
+      c.nSabores = max;
+      await whatsappService.sendMessage(to, `La de *${c.tamano} porciones* se combina con máximo *${max} sabores*: seguimos con ${max} 👌`);
+    }
+    const n = c.nSabores ?? (c.sabores.length >= 2 ? Math.min(c.sabores.length, max) : 2);
+    c.nSabores = n;
+    if (c.sabores.length > n) {
+      const fuera = c.sabores.slice(n);
+      c.sabores = c.sabores.slice(0, n);
+      await whatsappService.sendMessage(to, `La de *${c.tamano} porciones* se combina con máximo *${n} sabores* (${repartoDe(c.tamano, n).join('+')}) 🙂\nTomo *${c.sabores.join('* y *')}* y dejo por fuera ${fuera.join(', ')}. Si prefieres otros, toca *Cambiar sabores*.`);
+    }
+    if (c.sabores.length < n) return this.comboPedirSabores(to);
+    const problema = validar({ tamano: c.tamano, sabores: c.sabores });
+    if (problema) {
+      await whatsappService.sendMessage(to, problema);
+      if (/tamaño|porciones\*\. ¿De/.test(problema)) { c.tamano = null; return this.comboPreguntarTamano(to); }
+      c.sabores = []; return this.comboPedirSabores(to);
+    }
+    return this.comboResumen(to);
+  }
+
+  async comboPreguntarTamano(to) {
+    const c = sesion(to).combo;
+    c.paso = 'tamano';
+    const conSabores = c.sabores.length >= 2 ? c.sabores : null;
+    const rows = TAMANOS.map((t) => {
+      const base = conSabores ? precioCombinada(t, conSabores) : null;
+      const desde = base ? cop(base.precio) : `desde ${cop(Math.min(...[...SABORES.values()].map((e) => e.tamanos[t]?.precio ?? Infinity)))}`;
+      const max = maxSabores(t);
+      return { id: `pz_t:${t}`, title: `${t} porciones`, description: `${max === 2 ? 'mitad y mitad' : `2 o 3 sabores`} · ${desde}`.slice(0, 72) };
+    });
+    await whatsappService.sendListMessage(to, {
+      header: '🍕 ¿De cuántas porciones?',
+      body: conSabores ? `Tu pizza ${c.sabores.join(' + ')}: elige el tamaño 👇` : 'Elige el tamaño de tu pizza combinada 👇',
+      footer: "Black's Pizza",
+      button: 'Elegir tamaño',
+      sections: [{ title: 'Tamaños', rows }],
+    });
+  }
+
+  async comboTamano(to, tamano) {
+    const c = sesion(to).combo;
+    if (!c) return this.iniciarCombo(to, { tamano });
+    if (!TAMANOS.includes(tamano)) return;
+    c.tamano = tamano;
+    if (c.nSabores && c.nSabores > maxSabores(tamano)) c.nSabores = null;
+    return this.comboSiguientePaso(to);
+  }
+
+  async comboPreguntarNumeroSabores(to) {
+    const c = sesion(to).combo;
+    c.paso = 'nsabores';
+    const r = REPARTOS[c.tamano];
+    await whatsappService.sendInteractiveButtons(to, `Pizza de *${c.tamano} porciones* 🍕\n¿De cuántos sabores la quieres?`, [
+      { type: 'reply', reply: { id: 'pz_n2', title: `2 sabores (${r[2].join('+')})` } },
+      { type: 'reply', reply: { id: 'pz_n3', title: `3 sabores (${r[3].join('+')})` } },
+    ]);
+  }
+
+  async comboNumeroSabores(to, n) {
+    const c = sesion(to).combo;
+    if (!c) return;
+    c.nSabores = n;
+    if (c.sabores.length > n) c.sabores = c.sabores.slice(0, n);
+    return this.comboSiguientePaso(to);
+  }
+
+  async comboPedirSabores(to) {
+    const c = sesion(to).combo;
+    c.paso = 'sabores';
+    const n = c.nSabores;
+    const reparto = repartoDe(c.tamano, n);
+    const faltan = n - c.sabores.length;
+    const ya = c.sabores.length ? `Ya tengo: *${c.sabores.join('* y *')}*.\n` : '';
+    const pide = faltan === n
+      ? `Escribe los *${n} sabores* que quieres (por ejemplo: "hawaiana y mexicana")`
+      : `Escribe ${faltan === 1 ? 'el otro sabor' : `los otros ${faltan} sabores`}`;
+    await whatsappService.sendMessage(to, `🍕 *Pizza de ${c.tamano} porciones · ${n} sabores* (${reparto.join(' + ')} porciones)\n${ya}${pide} 👇\n\n${textoSabores(c.tamano)}\n\n_Se cobra el precio del sabor más caro._`);
+  }
+
+  async comboPreguntarAmbiguo(to) {
+    const c = sesion(to).combo;
+    c.paso = 'ambiguo';
+    const candidatos = c.ambiguos[0];
+    await whatsappService.sendListMessage(to, {
+      header: '🍕 ¿Cuál de estas?',
+      body: `Tenemos varias pizzas con eso. ¿Cuál quieres? 👇`,
+      footer: "Black's Pizza",
+      button: 'Elegir sabor',
+      sections: [{ title: 'Sabores', rows: candidatos.slice(0, 10).map((sab) => ({ id: `pz_s:${sab}`, title: sab.slice(0, 24), description: c.tamano && SABORES.get(sab)?.tamanos[c.tamano] ? cop(SABORES.get(sab).tamanos[c.tamano].precio) : undefined })) }],
+    });
+  }
+
+  async comboSaborElegido(to, sabor) {
+    const c = sesion(to).combo;
+    if (!c || !SABORES.has(sabor)) return;
+    c.ambiguos.shift();
+    if (!c.sabores.includes(sabor)) c.sabores.push(sabor);
+    return this.comboSiguientePaso(to);
+  }
+
+  /** Texto del cliente mientras arma la combinación (sabores, tamaño, "cancelar"). */
+  async atenderComboTexto(to, t) {
+    const s = sesion(to);
+    const c = s.combo;
+    const lower = normalizar(t);
+    if (/^(cancelar|cancela|no quiero|ya no|olvidalo|dejalo asi)\b/.test(lower)) return this.comboCancelar(to);
+    const leido = leerPedidoPizza(t);
+    if (c.paso === 'resumen') {
+      if (/^(si|sí|ok|listo|dale|confirmo|agrega|agregar|esta bien|correcto)\b/.test(lower)) return this.comboConfirmar(to);
+      if (/^(no|cambiar|cambia|otro)\b/.test(lower) && !leido.sabores.length) return this.comboReiniciarSabores(to);
+    }
+    let algo = false;
+    if (leido.tamano && leido.tamano !== c.tamano) { c.tamano = leido.tamano; if (c.nSabores && c.nSabores > maxSabores(c.tamano)) c.nSabores = null; algo = true; }
+    if (leido.nSabores) { c.nSabores = leido.nSabores; algo = true; }
+    // "no, mexicana y ranchera" en el resumen → se reemplazan los sabores.
+    if (leido.sabores.length >= 2 && c.paso === 'resumen') { c.sabores = []; }
+    for (const sab of leido.sabores) if (!c.sabores.includes(sab)) { c.sabores.push(sab); algo = true; }
+    for (const amb of leido.ambiguos) { c.ambiguos.push(amb); algo = true; }
+    if (!algo) {
+      const ayuda = c.paso === 'tamano' ? 'Dime el tamaño: *4, 6, 8 o 12 porciones* 🙂'
+        : c.paso === 'nsabores' ? '¿De *2* o de *3* sabores? 🙂'
+        : c.paso === 'resumen' ? 'Responde con los botones 👆 o escribe *cancelar*.'
+        : `No encontré ese sabor 🙈. Escríbelo como aparece en la lista (por ejemplo: "hawaiana y mexicana") o *cancelar*.`;
+      await whatsappService.sendMessage(to, ayuda);
+      return;
+    }
+    return this.comboSiguientePaso(to);
+  }
+
+  async comboResumen(to) {
+    const c = sesion(to).combo;
+    c.paso = 'resumen';
+    const item = armarItem({ tamano: c.tamano, sabores: c.sabores, cantidad: c.cantidad });
+    if (!item) { await whatsappService.sendMessage(to, 'No pude armar esa combinación 😔. Escribe *asesor* y una persona te ayuda.'); return this.comboCancelar(to, { silencio: true }); }
+    c.item = item;
+    await whatsappService.sendInteractiveButtons(to, `${textoResumen(item)}\n\n¿Así está bien?`.slice(0, 1024), [
+      { type: 'reply', reply: { id: 'pz_ok', title: c.origen === 'carrito' ? 'Sí, así ✅' : 'Agregar al pedido ✅' } },
+      { type: 'reply', reply: { id: 'pz_cambiar', title: 'Cambiar sabores ✏️' } },
+      { type: 'reply', reply: { id: 'pz_cancel', title: 'Cancelar ✖' } },
+    ]);
+  }
+
+  async comboReiniciarSabores(to) {
+    const c = sesion(to).combo;
+    if (!c) return;
+    c.sabores = []; c.ambiguos = []; c.item = null;
+    return this.comboSiguientePaso(to);
+  }
+
+  async comboCancelar(to, { silencio = false } = {}) {
+    const s = sesion(to);
+    const c = s.combo;
+    s.combo = null;
+    if (c?.origen === 'carrito') {
+      if (!silencio) await whatsappService.sendMessage(to, 'Listo, la dejo de un solo sabor 👌');
+      return this.comboSeguirCarrito(to);
+    }
+    if (!silencio) await whatsappService.sendMessage(to, 'Listo, no combinamos 👌. Si quieres, escribe *pizzas* para ver la carta.');
+  }
+
+  /** "Agregar al pedido" / "Sí, así": la pizza combinada entra al pedido. */
+  async comboConfirmar(to) {
+    const s = sesion(to);
+    const c = s.combo;
+    if (!c?.item) return;
+    s.combo = null;
+    if (c.origen === 'carrito' && Number.isInteger(c.linea) && s.productos?.[c.linea]) {
+      // Reemplaza la línea del carrito (o la parte que se combina) y sigue con las demás pizzas.
+      const original = s.productos[c.linea];
+      const restantes = (Number(original.quantity) || 1) - c.item.quantity;
+      const lista = [...s.productos];
+      lista[c.linea] = { ...c.item, comboPreguntado: true };
+      if (restantes > 0) lista.splice(c.linea + 1, 0, { ...original, quantity: restantes, comboPreguntado: true });
+      const { pedidoStr, monto } = this.resumenCarrito(lista);
+      nuevoPedido(to, { productos: lista, pedidoStr, monto });
+      s.pedido = { ...(s.pedido ?? {}), estado: 'confirmar' };
+      s.comboPendientes = (s.comboPendientes ?? []).map((i) => (i > c.linea && restantes > 0 ? i + 1 : i));
+      return this.comboSeguirCarrito(to);
+    }
+    // Vino por texto: se suma al pedido pendiente o abre uno nuevo, y sigue el flujo de siempre.
+    return this.aplicarCarrito(to, [c.item], this.pedidoPendiente(to) ? 'agregar' : 'nuevo');
+  }
+
+  // ---- Carrito con pizzas: "¿Deseas combinar las porciones?" por cada línea ----------------
+
+  /** Líneas del pedido que son pizzas de un solo sabor y aún no se les preguntó. */
+  pizzasSinPreguntar(to) {
+    const s = sesion(to);
+    return (s.productos ?? []).map((p, i) => (esPizza(p.product_retailer_id) && !p.combinada && !p.comboPreguntado ? i : -1)).filter((i) => i >= 0);
+  }
+
+  /** Antes de "¿Está todo bien?": si hay pizzas sin preguntar, pregunta por la primera. Devuelve true si preguntó. */
+  async comboPreguntarCarrito(to) {
+    const s = sesion(to);
+    const pendientes = this.pizzasSinPreguntar(to);
+    if (!pendientes.length) return false;
+    s.comboPendientes = pendientes;
+    const i = pendientes[0];
+    const p = s.productos[i];
+    const { sabor, tamano } = PIZZA_POR_ID.get(String(p.product_retailer_id));
+    s.comboLinea = i;
+    const max = maxSabores(tamano);
+    await whatsappService.sendInteractiveButtons(to, `Tu pedido tiene *Pizza ${sabor} (${tamano} porciones)*${p.quantity > 1 ? ` x${p.quantity}` : ''} 🍕\n\n¿Deseas *combinar las porciones* con otro sabor? (${max === 2 ? 'mitad y mitad' : 'hasta 3 sabores'}; se cobra el sabor más caro)`, [
+      { type: 'reply', reply: { id: 'pzc_si', title: 'Sí, combinar 🍕' } },
+      { type: 'reply', reply: { id: 'pzc_no', title: 'No, así está bien' } },
+    ]);
+    return true;
+  }
+
+  async comboRespuestaCarrito(to, combinar) {
+    const s = sesion(to);
+    const i = s.comboLinea;
+    const p = Number.isInteger(i) ? s.productos?.[i] : null;
+    if (!p) return this.comboSeguirCarrito(to);
+    if (!combinar) { p.comboPreguntado = true; return this.comboSeguirCarrito(to); }
+    const { sabor, tamano } = PIZZA_POR_ID.get(String(p.product_retailer_id));
+    if ((Number(p.quantity) || 1) > 1) {
+      s.comboBorrador = { tamano, sabores: [sabor], linea: i };
+      await whatsappService.sendInteractiveButtons(to, `Tienes *${p.quantity}* pizzas ${sabor} de ${tamano} porciones. ¿Las combinamos todas igual o solo una?`, [
+        { type: 'reply', reply: { id: 'pz_todas', title: `Las ${p.quantity} iguales` } },
+        { type: 'reply', reply: { id: 'pz_una', title: 'Solo una' } },
+      ]);
+      return;
+    }
+    return this.iniciarCombo(to, { tamano, sabores: [sabor], cantidad: 1, origen: 'carrito', linea: i });
+  }
+
+  async comboCantidadCarrito(to, todas) {
+    const s = sesion(to);
+    const b = s.comboBorrador;
+    s.comboBorrador = null;
+    const p = b && s.productos?.[b.linea];
+    if (!p) return this.comboSeguirCarrito(to);
+    return this.iniciarCombo(to, { tamano: b.tamano, sabores: b.sabores, cantidad: todas ? Number(p.quantity) || 1 : 1, origen: 'carrito', linea: b.linea });
+  }
+
+  /** Siguiente pizza sin preguntar o, si no hay, "¿Está todo bien?". */
+  async comboSeguirCarrito(to) {
+    const s = sesion(to);
+    s.comboLinea = null;
+    if (await this.comboPreguntarCarrito(to)) return;
+    s.comboPendientes = null;
+    if (this.pedidoPendiente(to)) { await this.pedirConfirmacion(to, { modo: s.comboModo ?? 'nuevo' }); this.programarRecordatorio(to); }
+    s.comboModo = null;
   }
 }
 

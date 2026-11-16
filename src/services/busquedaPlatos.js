@@ -43,7 +43,9 @@ const STOP = new Set(['quiero', 'quisiera', 'regala', 'regalas', 'regalan', 'reg
   // Palabras comunes que se parecen a platos ("pero" ≈ "perro", "vamos" ≈ "vaso").
   'pero', 'vamo', 'vaya', 'entre', 'nosotro', 'podemo', 'puedo', 'resto', 'todo', 'nada', 'bien', 'solo', 'ahi', 'aca', 'listo', 'ya', 'pague', 'pagar', 'hablar', 'alguien', 'comer', 'ir', 'voy', 'van', 'va', 'llega', 'cuando', 'donde', 'yo', 'usted', 'ustede', 'senor', 'senora', 'amigo', 'bueno', 'mejor', 'hacer', 'favor', 'mismo', 'misma', 'ese', 'esa', 'eso', 'este', 'esto', 'cual', 'quien', 'porque', 'pue', 'entonce', 'gracia', 'gracias', 'ok', 'vale']);
 // Palabras de los nombres que, solas, no identifican un plato.
-const GENERICAS = new Set(['porcion', 'porcione', 'personal', 'mediana', 'mediano', 'grande', 'pequena', 'pequeno', 'familiar', 'sencillo', 'sencilla', 'especial', 'doble', 'mixto', 'mixta', 'tradicional', 'super', 'casa', 'agua', 'leche', 'litro', 'ml', 'lt', 'oz', 'und', 'unidad', 'borde', 'queso']);
+const GENERICAS = new Set(['porcion', 'porcione', 'personal', 'mediana', 'mediano', 'grande', 'pequena', 'pequeno', 'familiar', 'sencillo', 'sencilla', 'especial', 'doble', 'mixto', 'mixta', 'tradicional', 'super', 'casa', 'agua', 'leche', 'litro', 'ml', 'lt', 'oz', 'und', 'unidad', 'borde', 'queso',
+  // v3.6.1: "menú" solo no es un plato ("me regala el menú" → las cartas, no el Menú Infantil de la heladería).
+  'menu', 'carta', 'plato', 'comida']);
 
 function construirIndice() {
   const porId = new Map();
