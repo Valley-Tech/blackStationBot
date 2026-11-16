@@ -1456,7 +1456,7 @@ class MessageHandler {
     const pide = faltan === n
       ? `Escribe los *${n} sabores* que quieres (por ejemplo: "hawaiana y mexicana")`
       : `Escribe ${faltan === 1 ? 'el otro sabor' : `los otros ${faltan} sabores`}`;
-    await whatsappService.sendMessage(to, `🍕 *Pizza de ${c.tamano} porciones · ${n} sabores* (${reparto.join(' + ')} porciones)\n${ya}${pide} 👇\n\n${textoSabores(c.tamano)}\n\n_Se cobra el precio del sabor más caro._`);
+    await whatsappService.sendMessage(to, `🍕 *Pizza de ${c.tamano} porciones · ${n} sabores* (${reparto.join(' + ')} porciones)\n${ya}${pide} 👇\n\n${textoSabores(c.tamano)}\n`);
   }
 
   async comboPreguntarAmbiguo(to) {

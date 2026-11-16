@@ -237,5 +237,5 @@ export function textoResumen(item) {
   const { tamano, sabores, reparto } = item.combinada;
   const base = precioCombinada(tamano, sabores);
   const cant = item.quantity > 1 ? ` x${item.quantity}` : '';
-  return `🍕 *Pizza de ${tamano} porciones combinada*${cant}\n${textoReparto(sabores, reparto, '\n')}\n\n*Precio:* ${cop(item.item_price)}${item.quantity > 1 ? ` c/u (${cop(item.item_price * item.quantity)})` : ''}\n_(se cobra el precio del sabor más caro: ${base.sabor})_`;
+  return `🍕 *Pizza de ${tamano} porciones combinada*${cant}\n${textoReparto(sabores, reparto, '\n')}\n\n*Precio:* ${cop(item.item_price)}${item.quantity > 1 ? ` c/u (${cop(item.item_price * item.quantity)})` : ''}`;
 }
