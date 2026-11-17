@@ -288,7 +288,7 @@ function textoCuerpo(tarjetas, texto) {
   const variantes = tarjetas.some((t) => t.conVariantes);
   const n = tarjetas.length;
   const intro = n === 1 ? '¡Aquí la tienes! 👇' : `Encontré ${n} opciones para ti 👇${n > 2}`;
-  const pasos = `Toca *Ver*${variantes ? ', elige lo que desees' : ''} y agrégala al carrito 🛒${cantidad && cantidad > 1 ? ` (pon la cantidad: *${cantidad}*)` : ''}.`;
+  const pasos = `Toca *Ver*${variantes} y agrégala al carrito 🛒${cantidad && cantidad > 1 ? ` (pon la cantidad: *${cantidad}*)` : ''}.`;
   return `${intro}\n\n${pasos}\nEnvía el carrito y te confirmo el pedido 😊`;
 }
 
