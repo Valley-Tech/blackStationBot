@@ -103,7 +103,7 @@ class MessageHandler {
         }
         if (/^(ped_|cart_|ad_|pzc?_)/.test(boton ?? '')) return this.handleMenuOption(from, boton);
       }
-      if (isWithinBusinessHours()) {
+      if (isWithinBusinessHours() || message?.from === "573161763710") {
         if (message?.type === 'text') {
           // v3.5: saludo una vez por turno, cortesías, búsqueda de platos con IA y seguimiento del pedido.
           await this.atenderTexto(from, message, senderInfo);
