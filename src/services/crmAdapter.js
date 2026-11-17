@@ -113,10 +113,13 @@ export async function recordSent(to, data, metaResponse) {
  * ai_not_configured) o si el CRM no respondió: el bot sigue con su menú.
  * No usa Gemini por su cuenta.
  */
-export async function askAi(to, text) {
+export async function askAi(to, text, { history = null } = {}) {
   if (!crmEnabled) return null;
   try {
-    const { data } = await crm.post('/ai/reply', { to, text, phoneNumberId: CRM_PHONE_NUMBER_ID }, { timeout: 45000 });
+    // v3.9: con `history` (memoria del turno del bot) el CRM no usa su propio historial.
+    const body = { to, text, phoneNumberId: CRM_PHONE_NUMBER_ID };
+    if (Array.isArray(history) && history.length) body.history = history.slice(-40).map((h) => ({ role: h.role, text: String(h.text).slice(0, 4000) }));
+    const { data } = await crm.post('/ai/reply', body, { timeout: 45000 });
     return data?.text ?? null;
   } catch (error) {
     const code = error.response?.data?.error?.code ?? error.response?.data?.code;

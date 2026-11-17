@@ -100,3 +100,29 @@ la combinada de una vez, también en el primer mensaje.
 **Bordes** (Queso, Bocadillo, Mozzarella): "con borde de queso" agrega `Borde Queso (N porciones)` del mismo tamaño,
 en la de un sabor y en la combinada. "Con borde" sin decir cuál → 3 botones con el precio. "Queso" y "bocadillo" del
 borde ya no se confunden con sabores de pizza.
+
+## v3.9 · Memoria del turno y datos del pedido escritos en el chat
+
+**Memoria** (`src/services/memoria.js`): por cliente, todo el turno (desde que escribe, aunque sea antes de abrir,
+hasta HORA_CIERRE + `MEMORIA_GRACIA_MIN` = 60 min). Guarda:
+- el historial del turno (cliente y bot; tarjetas, carruseles, botones y carritos como texto) → se envía a la IA
+  del CRM en cada pregunta (`history` de `/ai/reply`), con una nota de los datos que ya dio el cliente;
+- los datos: pago, recoger/domicilio, dirección, nombre de WhatsApp y la pizza (sabor, tamaño, "un solo sabor" o
+  combinada).
+Con eso: "De cuatro porciones" después de la tarjeta de un sabor se entiende; si ya dijo "un solo sabor" el bot no
+vuelve a preguntar "¿así o combinada?" (ni por texto ni cuando manda el carrito); "Así está bien" en una pizza vale
+para todo el turno. `MEMORIA_IA=false` → la IA vuelve a usar solo el historial del CRM.
+Límite: vive en la memoria del servidor; un despliegue o reinicio durante el servicio la borra.
+
+**Datos del pedido en el chat** (`src/services/datosCliente.js`): "pago por transferencia", "dame el QR", "en
+efectivo", "por nequi", "paso a recoger", "para llevar", "a domicilio a la calle 10 # 5-20"… se anotan con los ids
+del Flow (`pago`: Efectivo | Transferencia | Codigo QR; `paradonde`: restaurante | domicilio). Las preguntas
+("¿reciben transferencia?", "¿cuánto vale el domicilio?") no cuentan. Se muestran en "¿Está todo bien?"
+("📝 Anoté: recoges en el restaurante · pagas por transferencia").
+- "¿Y el valor?" / "¿cuánto es?" con pedido en curso → total (y QR o cuentas si ya lo envió).
+- "Dame el QR" con pedido enviado → el QR con el total.
+- Un pedido con datos de pago en el mismo mensaje ya no se va a la IA como "pregunta de pagos".
+
+**Flow precargado** (`FLOW_PRECARGA=true`): el Flow de pedido se abre con `flow_action: navigate` y
+`init_values` = { name, phone, paradonde, pago, recomendacion: "Dirección: …" } (solo los conocidos).
+Requiere el Flow con `"init-values": "${data.init_values}"` en el Form: `docs/FLOW-PEDIDO-PRECARGADO.json`.

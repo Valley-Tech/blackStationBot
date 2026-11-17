@@ -82,6 +82,11 @@ export default {
   DOMICILIO_VALOR: Number(process.env.DOMICILIO_VALOR ?? 3000),
   HORA_APERTURA: process.env.HORA_APERTURA || '16:00',           // turno: 4:00 p. m.
   HORA_CIERRE: process.env.HORA_CIERRE || '00:00',               // a 12:00 a. m. (pasa la medianoche)
+  // v3.9: memoria del turno. MEMORIA_IA=false → la IA usa solo el historial del CRM (como antes).
+  MEMORIA_IA: !/^(0|false|no)$/i.test(process.env.MEMORIA_IA || 'true'),
+  // v3.9: abrir el Flow de pedido con los datos que el cliente ya dio (pago, recoger/domicilio, nombre, teléfono).
+  // Actívalo SOLO después de publicar el Flow con "init-values" (docs/FLOW-PEDIDO-PRECARGADO.json).
+  FLOW_PRECARGA: /^(1|true|si|yes)$/i.test(process.env.FLOW_PRECARGA || 'false'),
   // v3.5 · seguimiento del pedido sin terminar y adicionales
   RECORDATORIO_PEDIDO_MIN: Number(process.env.RECORDATORIO_PEDIDO_MIN) || 5, // cada cuántos minutos se recuerda
   RECORDATORIO_PEDIDO_MAX: Number(process.env.RECORDATORIO_PEDIDO_MAX ?? 2),  // cuántas veces como máximo (0 = nunca)

@@ -1,0 +1,38 @@
+{
+  "messaging_product": "whatsapp",
+  "recipient_type": "individual",
+  "to": "57TU_NUMERO",
+  "type": "interactive",
+  "interactive": {
+    "type": "flow",
+    "header": {
+      "type": "text",
+      "text": "Prueba precarga"
+    },
+    "body": {
+      "text": "Haz clic aquí 👇"
+    },
+    "action": {
+      "name": "flow",
+      "parameters": {
+        "flow_message_version": "3",
+        "flow_id": "TU_FLOW_ID_PEDIDO",
+        "flow_token": "pedido:57TU_NUMERO:prueba",
+        "flow_cta": "Pedido",
+        "mode": "draft",
+        "flow_action": "navigate",
+        "flow_action_payload": {
+          "screen": "DETAILS",
+          "data": {
+            "init_values": {
+              "name": "Prueba",
+              "phone": "3001234567",
+              "paradonde": "restaurante",
+              "pago": "Transferencia"
+            }
+          }
+        }
+      }
+    }
+  }
+}

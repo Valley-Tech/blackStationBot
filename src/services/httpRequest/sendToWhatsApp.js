@@ -3,6 +3,7 @@ import config from '../../config/env.js';
 import { logAxiosError } from '../printDetailError.js';
 import { CRM_MODE, crmEnabled, canBotReply, recordSent, sendViaCrm } from '../crmAdapter.js';
 import { reportarFalla } from '../reportarFallas.js';
+import { registrarSalida } from '../memoria.js';
 
 /**
  * Reemplazo de sendToWhatsApp: misma firma y mismas exportaciones que el
@@ -33,7 +34,9 @@ const sendToWhatsApp = async (data) => {
     const to = data.to;
 
     if (CRM_MODE === 'gateway' && crmEnabled) {
-        return sendViaCrm(to, data);
+        const r = await sendViaCrm(to, data);
+        if (r) registrarSalida(to, data); // v3.9: memoria del turno
+        return r;
     }
 
     // Modo espejo ----------------------------------------------------------
@@ -55,6 +58,7 @@ const sendToWhatsApp = async (data) => {
             data,
         });
         if (to && data.status !== 'read') recordSent(to, data, response.data); // no se espera: no frena al bot
+        if (to) registrarSalida(to, data); // v3.9: memoria del turno
         return response.data;
     } catch (error) {
         logAxiosError('Error: ', error);

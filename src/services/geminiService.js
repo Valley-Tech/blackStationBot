@@ -1,4 +1,5 @@
 import { askAi } from './crmAdapter.js';
+import { historialParaIA } from './memoria.js';
 
 /**
  * IA del chatbot — misma lógica que Mishabella (v2.12).
@@ -36,7 +37,9 @@ const geminiService = async (message, to) => {
     return null;
   }
   try {
-    return await askAi(to, text);
+    // v3.9: la IA recibe la memoria del turno (lo que se habló hoy, tarjetas y botones incluidos,
+    // y los datos que el cliente ya dio). Sin memoria, el CRM usa su historial de siempre.
+    return await askAi(to, text, { history: historialParaIA(to, text) });
   } catch (error) {
     console.error('[ia] error pidiendo la respuesta al CRM:', error.message);
     return null;

@@ -1,0 +1,214 @@
+{
+    "version": "7.0",
+    "data_api_version": "3.0",
+    "routing_model": {
+        "DETAILS": [
+            "SUMMARY"
+        ],
+        "SUMMARY": []
+    },
+    "screens": [
+        {
+            "id": "DETAILS",
+            "title": "Datos para el domicilio",
+            "data": {
+                "init_values": {
+                    "type": "object",
+                    "properties": {
+                        "name": {
+                            "type": "string"
+                        },
+                        "phone": {
+                            "type": "string"
+                        },
+                        "paradonde": {
+                            "type": "string"
+                        },
+                        "pago": {
+                            "type": "string"
+                        },
+                        "recomendacion": {
+                            "type": "string"
+                        }
+                    },
+                    "__example__": {
+                        "name": "Ana",
+                        "phone": "3001234567",
+                        "paradonde": "restaurante",
+                        "pago": "Transferencia"
+                    }
+                }
+            },
+            "layout": {
+                "type": "SingleColumnLayout",
+                "children": [
+                    {
+                        "type": "Form",
+                        "name": "details_form",
+                        "init-values": "${data.init_values}",
+                        "children": [
+                            {
+                                "type": "TextHeading",
+                                "text": "Ingresa tus datos:"
+                            },
+                            {
+                                "type": "TextInput",
+                                "label": "Nombre:",
+                                "input-type": "text",
+                                "name": "name",
+                                "required": true
+                            },
+                            {
+                                "type": "TextInput",
+                                "label": "Teléfono de llamada:",
+                                "input-type": "phone",
+                                "name": "phone",
+                                "required": true
+                            },
+                            {
+                                "type": "RadioButtonsGroup",
+                                "name": "paradonde",
+                                "required": true,
+                                "data-source": [
+                                    {
+                                        "id": "restaurante",
+                                        "title": "Recoger en restaurante"
+                                    },
+                                    {
+                                        "id": "domicilio",
+                                        "title": "Pedir a domicilio"
+                                    }
+                                ],
+                                "label": "Tu pedido es para:"
+                            },
+                            {
+                                "type": "Dropdown",
+                                "label": "Medio de pago:",
+                                "name": "pago",
+                                "required": true,
+                                "data-source": [
+                                    {
+                                        "id": "Efectivo",
+                                        "title": "Efectivo"
+                                    },
+                                    {
+                                        "id": "Transferencia",
+                                        "title": "Transferencia bancaria"
+                                    },
+                                    {
+                                        "id": "Codigo QR",
+                                        "title": "Codigo QR"
+                                    }
+                                ]
+                            },
+                            {
+                                "type": "If",
+                                "condition": "${form.pago}=='Efectivo'",
+                                "then": [
+                                    {
+                                        "type": "TextInput",
+                                        "name": "billete",
+                                        "input-type": "number",
+                                        "helper-text": "Dime por favor de cuánto es el billete para los vueltos",
+                                        "label": "Billete con que paga: "
+                                    }
+                                ]
+                            },
+                            {
+                                "type": "TextArea",
+                                "label": "Recomendaciones o observaciones",
+                                "helper-text": "Indica recomendaciones, observaciones o sugerencias para tener en cuenta en tu pedido",
+                                "name": "recomendacion",
+                                "required": false
+                            },
+                            {
+                                "type": "Footer",
+                                "label": "Continue",
+                                "on-click-action": {
+                                    "name": "data_exchange",
+                                    "payload": {
+                                        "name": "${form.name}",
+                                        "recomendacion": "${form.recomendacion}",
+                                        "pago": "${form.pago}",
+                                        "address": "${form.paradonde}",
+                                        "phone": "${form.phone}",
+                                        "billete": "${form.billete}"
+                                    }
+                                }
+                            }
+                        ]
+                    }
+                ]
+            }
+        },
+        {
+            "id": "SUMMARY",
+            "title": "Resumen de datos",
+            "terminal": true,
+            "data": {
+                "details": {
+                    "type": "string",
+                    "__example__": ""
+                },
+                "name": {
+                    "type": "string",
+                    "__example__": ""
+                },
+                "recomendacion": {
+                    "type": "string",
+                    "__example__": ""
+                },
+                "pago": {
+                    "type": "string",
+                    "__example__": ""
+                },
+                "phone": {
+                    "type": "string",
+                    "__example__": ""
+                },
+                "address": {
+                    "type": "string",
+                    "__example__": ""
+                },
+                "billete": {
+                    "type": "string",
+                    "__example__": ""
+                }
+            },
+            "layout": {
+                "type": "SingleColumnLayout",
+                "children": [
+                    {
+                        "type": "Form",
+                        "name": "confirmation_form",
+                        "children": [
+                            {
+                                "type": "TextHeading",
+                                "text": "Confirma tus datos:"
+                            },
+                            {
+                                "type": "TextBody",
+                                "text": "${data.details}"
+                            },
+                            {
+                                "type": "Footer",
+                                "label": "Confirmar",
+                                "on-click-action": {
+                                    "name": "data_exchange",
+                                    "payload": {
+                                        "name": "${data.name}",
+                                        "recomendacion": "${data.recomendacion}",
+                                        "pago": "${data.pago}",
+                                        "address": "${data.address}",
+                                        "phone": "${data.phone}",
+                                        "billete": "${data.billete}"
+                                    }
+                                }
+                            }
+                        ]
+                    }
+                ]
+            }
+        }
+    ]
+}

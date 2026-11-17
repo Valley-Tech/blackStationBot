@@ -16,6 +16,13 @@ import { leerPedidoPizza, hablaDePizza, quiereCombinar, quiereUnSolo, saboresEnT
 import { product_names, CATALOGOS, areaPorId, grupoPorId, precios, nombrePorId } from '../data/catalogo.js';
 import config from '../config/env.js';
 import negocio from '../config/negocio.js';
+import { memoria, datosDe, recordar, olvidar, usarNombres, turnoDeMemoria } from './memoria.js';
+import { datosEnTexto, telefonoLocal, PAGOS } from './datosCliente.js';
+import { tamanoEnTexto } from './pizzasCombinadas.js';
+
+// v3.9: la memoria muestra los productos por su nombre ("[Bot mostró el producto: Pizza Hawaiana (8 porciones)]").
+usarNombres((id) => nombrePorId[id] ?? id);
+const TEXTO_PAGO = { Efectivo: 'en efectivo', Transferencia: 'por transferencia', 'Codigo QR': 'con código QR', PSE: 'con PSE' };
 
 /**
  * BlackStationBot · La Estación Parrilla Bar (+ Black's Pizza y Heladería Yellow).
@@ -119,6 +126,10 @@ class MessageHandler {
         // Pedido de las últimas 3 h ("¿se demora?" después del cierre): lo atiende la IA, no el aviso de horario.
         const pedido = obtenerSesion(from)?.pedido;
         if (message?.type === 'text' && pedido?.enviadoAt && Date.now() - pedido.enviadoAt < 3 * 3600 * 1000) {
+          // v3.9: "¿y el valor?", "dame el QR" sobre ese pedido → respuesta directa; lo demás, la IA (con memoria).
+          const anotados = datosEnTexto(message.text.body);
+          if (Object.keys(anotados).length) recordar(from, anotados);
+          if (await this.responderSobrePedido(from, message.text.body, anotados)) { await whatsappService.markAsRead(message.id); return; }
           await this.handleAssistandFlow(from, message.text.body, { botones: false });
           await whatsappService.markAsRead(message.id);
           return;
@@ -311,8 +322,29 @@ class MessageHandler {
         "flow_cta": "Pedido"
       },
     }
+    // v3.9: el Flow se abre con lo que el cliente ya dijo (pago, recoger/domicilio, nombre, teléfono).
+    if (config.FLOW_PRECARGA) {
+      action.parameters.flow_action = 'navigate';
+      action.parameters.flow_action_payload = { screen: 'DETAILS', data: { init_values: this.valoresFlowPedido(to) } };
+    }
     if (!config.FLOW_ID_PEDIDO) console.error('[flows] FLOW_ID_PEDIDO vacío: configura el Flow de pedido en Railway.');
     return await whatsappService.sendFlow(to, action, textos);
+  }
+
+  /**
+   * v3.9: valores iniciales del Flow de pedido (las claves son los "name" de los campos del Flow).
+   * Solo van los que se conocen; el cliente los puede cambiar en el formulario.
+   */
+  valoresFlowPedido(to) {
+    const d = datosDe(to);
+    const v = {};
+    if (d.nombre) v.name = d.nombre;
+    const tel = telefonoLocal(to);
+    if (/^3\d{9}$/.test(tel)) v.phone = tel;
+    if (['restaurante', 'domicilio'].includes(d.entrega)) v.paradonde = d.entrega;
+    if (PAGOS.includes(d.pago)) v.pago = d.pago;
+    if (d.direccion) v.recomendacion = `Dirección: ${d.direccion}`;
+    return v;
   }
 
   async menuReserva(to) {
@@ -641,6 +673,8 @@ class MessageHandler {
         await whatsappService.sendMessage(to, 'No encontré los datos de tu pedido 😔. Vuelve a enviarlo desde el carrito, por favor.');
         return;
       }
+      // v3.9: lo que eligió en el Flow queda en la memoria del turno (para "dame el QR", adicionales, la IA).
+      recordar(to, { pago: datosPedido.datos.pago, entrega: ['restaurante', 'domicilio'].includes(datosPedido.datos.address) ? datosPedido.datos.address : undefined, nombre: datosPedido.datos.name });
       // Domicilio ($3.000) solo si eligió "Pedir a domicilio" (address = "domicilio"), y una sola vez
       // aunque el Flow llegue repetido. Este monto es el que va en el aviso, en Wompi y en la transferencia.
       if (esDomicilio(datosPedido.datos) && !datosPedido.domicilioIncluido) {
@@ -989,6 +1023,12 @@ class MessageHandler {
     const lower = t.toLowerCase().trim();
     const pregunta = this.isQuestion(lower);
 
+    // v3.9: pago, recoger/domicilio y dirección que el cliente escriba en cualquier momento.
+    const anotados = datosEnTexto(t);
+    if (Object.keys(anotados).length) recordar(from, anotados);
+    // v3.9: "¿y el valor?", "dame el QR", "pago por transferencia" con un pedido en curso → respuesta directa.
+    if (await this.responderSobrePedido(from, t, anotados)) return;
+
     // v3.8: "sí", "ok", "listo" en el resumen de la pizza combinada = agregarla (no es una cortesía).
     if (s.combo?.paso === 'resumen' && /^(si|sí|ok|okay|listo|dale|de una|perfecto|esta bien|asi esta bien)[\s!.]*$/.test(normalizar(t))) return this.comboConfirmar(from);
     if (esCortesia(t)) {
@@ -1029,7 +1069,9 @@ class MessageHandler {
     if (s.pizza1 && await this.atenderPizza1Texto(from, t)) return;
 
     // "Hacer otra pregunta" o preguntas de tiempos, pagos, domicilio, estado del pedido → IA.
-    if (this.assistandState[from] || esPreguntaGeneral(t)) return this.handleAssistandFlow(from, t, { botones: pregunta });
+    // v3.9: un pedido con datos de pago ("pizza de 8 mitad hawaiana…, pago por transferencia") no es una pregunta general.
+    const esPedido = this.esPedidoDePizza(lower) || (hablaDePlatos(t) && (!pregunta || esPeticionDeProducto(t)));
+    if (this.assistandState[from] || (esPreguntaGeneral(t) && !esPedido)) return this.handleAssistandFlow(from, t, { botones: pregunta });
 
     // Platos: la IA completa el nombre y se muestran las tarjetas del catálogo.
     // v3.6: "¿qué hamburguesas tienes?", "¿tienen malteadas?" piden un producto: solo tarjetas, sin texto de la IA.
@@ -1039,7 +1081,8 @@ class MessageHandler {
     // "me la puedes hacer de 2 sabores", "un solo sabor"… (y no nombra otro plato).
     const otroPlato = /\b(salchipapa|choripapa|pollipapa|salchiplatano|hamburgues|burger|perro|hot ?dog|choriperro|patacon|sandwich|panzerot|lasa[nñ]|picada|asado|malteada|helado|jugo|michelada|gaseosa|cerveza|alitas|costilla|desgranado)/.test(normalizar(t));
     const vioPizzas = this.yaVioPizzas(s) || (s.productos ?? []).some((p) => esPizza(p.product_retailer_id));
-    const contextoPizza = vioPizzas && !otroPlato && (quiereCombinar(t) || quiereUnSolo(t) || saboresEnTexto(t).sabores.length >= 1);
+    const conSabor = Boolean(this.borradorPizza(s)?.sabor);
+    const contextoPizza = vioPizzas && !otroPlato && (quiereCombinar(t) || quiereUnSolo(t) || saboresEnTexto(t).sabores.length >= 1 || (conSabor && tamanoEnTexto(t)));
     if ((this.esPedidoDePizza(lower) || contextoPizza) && !/\b(panzerott?is?|lasan)/.test(lower) && await this.atenderPizzaTexto(from, t, { pregunta, pideProducto })) return;
     if (hablaDePlatos(t)) {
       const { tarjetas, sinFoto } = await buscarPlatos(from, t);
@@ -1174,8 +1217,79 @@ class MessageHandler {
     const s = sesion(to);
     const intro = modo === 'agregar' ? '✅ Listo, lo agregué.\n\n' : modo === 'reemplazar' ? '✅ Listo, cambié tu pedido.\n\n' : '';
     // (Sin la nota del domicilio, como lo dejaste. Antes quedó `${domicilio}` con el número 3000 pegado al subtotal: "$36.0003000".)
-    const texto = `${intro}*Tu pedido* 🛒\n\n${s.pedidoStr}\n\n*Subtotal:* ${cop(s.datosPedido?.monto)}\n\n¿Está todo bien?`;
+    const texto = `${intro}*Tu pedido* 🛒\n\n${s.pedidoStr}\n\n*Subtotal:* ${cop(s.datosPedido?.monto)}${this.textoAnotado(to)}\n\n¿Está todo bien?`;
     await whatsappService.sendInteractiveButtons(to, texto.slice(0, 1024), BOTONES_CONFIRMAR);
+  }
+
+  /**
+   * v3.9: respuestas directas sobre el pedido en curso, sin pasar por la IA:
+   *   · "¿y el valor?", "¿cuánto es?" → el total de su pedido (y el QR o las cuentas si ya lo envió);
+   *   · "dame el QR" / "pago por transferencia" / "paso a recoger" (sin pedir un plato) → se anota y:
+   *     pedido sin terminar → se le recuerda; pedido ya enviado → QR o cuentas con el total.
+   * Devuelve true si respondió.
+   */
+  async responderSobrePedido(to, t, anotados) {
+    const s = sesion(to);
+    const n = normalizar(t).replace(/[¿?¡!.,]/g, ' ').replace(/\s+/g, ' ').trim();
+    const palabras = n.split(' ').filter(Boolean).length;
+    const nombraPlato = this.esPedidoDePizza(n) || hablaDePlatos(t);
+    const pendiente = this.pedidoPendiente(to);
+    const p = s.pedido;
+    const enviado = p?.estado === 'enviado' && Date.now() - (p.ultimoAt ?? p.enviadoAt ?? 0) < 3 * 3600 * 1000;
+    const preguntaTotal = palabras <= 8 && !nombraPlato && /\b(valor|total|cuanto (es|seria|serian|queda|quedaria|me sale|sale|debo|le debo|te debo|pago|toca|hay que pagar)|cuanto (vale|cuesta) (todo|el pedido|en total|mi pedido))\b/.test(n);
+    const d = datosDe(to);
+
+    if (preguntaTotal && (pendiente || enviado)) {
+      if (enviado) {
+        const monto = s.datosPedido?.monto ?? 0;
+        await whatsappService.sendMessage(to, `El total de tu pedido es *${cop(monto)}* 🧾\n\n${s.pedidoStr}`);
+        const pago = p.datos?.pago ?? d.pago;
+        if (pago === 'Codigo QR') await this.sendMediaQR(to);
+        else if (pago === 'Transferencia') await whatsappService.sendMessage(to, `${negocio.cuentasBancarias}\n\nCuando transfieras, envíanos la captura del comprobante 😊`);
+        return true;
+      }
+      const domicilio = d.entrega === 'domicilio' && negocio.domicilio ? `\n_(+ ${cop(negocio.domicilio)} del domicilio)_` : '';
+      const resumen = `Tu pedido va así 🧾\n\n${s.pedidoStr}\n\n*Subtotal:* ${cop(s.datosPedido?.monto)}${domicilio}${this.textoAnotado(to)}`;
+      if (p.estado === 'confirmar') {
+        await whatsappService.sendInteractiveButtons(to, `${resumen}\n\n¿Lo confirmamos?`.slice(0, 1024), BOTONES_CONFIRMAR);
+      } else {
+        await whatsappService.sendMessage(to, resumen);
+        await this.menuPedido(to, { header: '¿Seguimos con tu pedido? 😊', body: 'Solo falta que llenes tus datos de entrega y pago. Toca *Pedido* 👇' });
+      }
+      return true;
+    }
+
+    // Solo datos del pedido (sin pedir un plato): "dame el QR", "pago por transferencia", "paso a recoger".
+    if (!Object.keys(anotados).length || nombraPlato || palabras > 18) return false;
+    const partes = [];
+    if (anotados.entrega === 'restaurante') partes.push('recoges en el restaurante');
+    if (anotados.entrega === 'domicilio') partes.push(`es a domicilio${anotados.direccion ? ` (${anotados.direccion})` : ''}`);
+    if (anotados.pago) partes.push(`pagas ${TEXTO_PAGO[anotados.pago] ?? anotados.pago}`);
+    const anote = `Listo, anoté que ${partes.join(' y ')} 👌`;
+    if (enviado) {
+      const monto = s.datosPedido?.monto ?? 0;
+      if (anotados.pago === 'Codigo QR') { await whatsappService.sendMessage(to, `${anote}\nEl total es *${cop(monto)}*. Aquí tienes el código QR 👇`); await this.sendMediaQR(to); return true; }
+      if (anotados.pago === 'Transferencia') { await whatsappService.sendMessage(to, `${anote}\nEl total es *${cop(monto)}*.\n\n${negocio.cuentasBancarias}\n\nCuando transfieras, envíanos la captura del comprobante 😊`); return true; }
+      await whatsappService.sendMessage(to, `${anote}. Ya se lo aviso al restaurante 😊`);
+      return true;
+    }
+    if (pendiente) {
+      await whatsappService.sendMessage(to, `${anote}${anotados.pago === 'Codigo QR' ? '. Te envío el QR apenas confirmes el pedido' : ''}`);
+      await this.recordarPedido(to);
+      return true;
+    }
+    await whatsappService.sendMessage(to, `${anote}\n¿Qué te gustaría pedir? Escribe el plato o toca *Pedir* 😊`);
+    return true;
+  }
+
+  /** v3.9: "📝 Anoté: recoges en el restaurante · pagas por transferencia" (lo que el cliente ya dijo). */
+  textoAnotado(to) {
+    const d = datosDe(to);
+    const partes = [];
+    if (d.entrega === 'restaurante') partes.push('recoges en el restaurante');
+    if (d.entrega === 'domicilio') partes.push(`a domicilio${d.direccion ? ` (${d.direccion})` : ''}`);
+    if (d.pago) partes.push(`pagas ${TEXTO_PAGO[d.pago] ?? d.pago}`);
+    return partes.length ? `\n📝 Anoté: ${partes.join(' · ')}` : '';
   }
 
   /** Confirmó: se manda el Flow de datos (entrega y pago). */
@@ -1335,7 +1449,33 @@ class MessageHandler {
   /** Borrador reciente (30 min) de lo que el cliente dijo de su pizza. */
   borradorPizza(s) {
     const b = s.pizzaBorrador;
-    return b && Date.now() - (b.at ?? 0) < 30 * 60000 ? b : null;
+    if (b && Date.now() - (b.at ?? 0) < 30 * 60000) return b;
+    // v3.9: si pasaron más de 30 min, la memoria del turno todavía recuerda su pizza (si no se agregó).
+    const m = s.memoria?.turno === turnoDeMemoria() ? s.memoria.datos?.pizza : null;
+    return m && !m.agregada ? m : null;
+  }
+
+  /**
+   * v3.9: anota en la memoria del turno lo que el cliente dijo de su pizza
+   * ({ sabor, tamano, borde, cantidad, decision: 'uno' | 'combinar', agregada }).
+   * Así no se le vuelve a preguntar lo que ya respondió (p. ej. "un solo sabor").
+   */
+  notarPizza(to, patch) {
+    const previo = datosDe(to).pizza ?? {};
+    // Si cambió de sabor, la decisión anterior no aplica (salvo que la diga de nuevo).
+    const cambia = patch.sabor && previo.sabor && patch.sabor !== previo.sabor;
+    const limpio = Object.fromEntries(Object.entries(patch).filter(([, v]) => v !== undefined && v !== null));
+    const nueva = { ...(cambia ? { decision: previo.decision === 'uno' && !previo.sabor ? 'uno' : undefined } : previo), ...limpio, at: Date.now() };
+    recordar(to, { pizza: nueva });
+    return nueva;
+  }
+
+  /** ¿Ya dijo hoy que esta pizza (sabor/id) la quiere de un solo sabor? */
+  yaDecidioUnSolo(to, id) {
+    const d = datosDe(to);
+    if ((d.pizzasOk ?? []).includes(String(id))) return true;
+    const info = PIZZA_POR_ID.get(String(id));
+    return d.pizza?.decision === 'uno' && (!d.pizza.sabor || d.pizza.sabor === info?.sabor);
   }
 
   /** ¿Ya le mostramos pizzas en esta conversación (últimas 2 h)? */
@@ -1383,11 +1523,19 @@ class MessageHandler {
       await this.iniciarPizza1(from, { sabor: sabores[0], tamano, borde, cantidad: leido.cantidad });
       return true;
     }
-    // 3. Nombró UN sabor.
-    if (leido.sabores.length === 1 && !leido.ambiguos.length) {
-      const sabor = leido.sabores[0];
+    // 3. Nombró UN sabor (o, v3.9, solo el tamaño de la pizza que ya había dicho: "de cuatro porciones").
+    const soloTamano = !leido.sabores.length && !leido.ambiguos.length && leido.tamano && b?.sabor;
+    if ((leido.sabores.length === 1 && !leido.ambiguos.length) || soloTamano) {
+      const sabor = soloTamano ? b.sabor : leido.sabores[0];
+      // v3.9: ya dijo hoy "un solo sabor" (para esta pizza o sin decir cuál) y sabemos el tamaño → directo al pedido.
+      const d = datosDe(from).pizza;
+      if (d?.decision === 'uno' && (!d.sabor || d.sabor === sabor) && tamano) {
+        await this.iniciarPizza1(from, { sabor, tamano, borde, cantidad: leido.cantidad });
+        return true;
+      }
       s.pizzaBorrador = { sabor, tamano, borde, cantidad: leido.cantidad, at: Date.now() };
-      if (!this.yaVioPizzas(s)) {
+      this.notarPizza(from, { sabor, tamano, borde, cantidad: leido.cantidad });
+      if (!this.yaVioPizzas(s) && !soloTamano) {
         // Primera vez: solo la tarjeta del sabor (en el tamaño que dijo). Sin preguntas.
         s.vioPizzasAt = Date.now();
         const tarjeta = tarjetaPizza(sabor, tamano);
@@ -1401,6 +1549,8 @@ class MessageHandler {
     }
     // 4. No dijo sabor ("quiero una pizza", "pizza de 12 porciones", "no sale la pizza que deseo"): la carta de pizzas.
     s.pizzaBorrador = { sabor: null, tamano, borde, cantidad: leido.cantidad, at: Date.now() };
+    if (leido.unSolo) this.notarPizza(from, { tamano, decision: 'uno' }); // "una pizza de un solo sabor" (aún sin sabor)
+    else if (tamano) this.notarPizza(from, { tamano });
     await this.mostrarCartaPizzas(from, { tamano: leido.tamano });
     return true;
   }
@@ -1461,6 +1611,7 @@ class MessageHandler {
   async iniciarPizza1(to, { sabor, tamano = null, borde = null, cantidad = 1 }) {
     const s = sesion(to);
     s.combo = null;
+    this.notarPizza(to, { sabor, tamano, decision: 'uno' });
     s.pizza1 = { paso: null, sabor, tamano, borde: borde ?? { pide: false, tipo: null }, cantidad: cantidad || 1, at: Date.now() };
     return this.pizza1Siguiente(to);
   }
@@ -1489,6 +1640,7 @@ class MessageHandler {
     if (p.borde?.tipo) items.push(bordeItem(p.borde.tipo, p.tamano, p.cantidad));
     s.pizza1 = null;
     s.pizzaBorrador = null;
+    this.notarPizza(to, { sabor: p.sabor, tamano: p.tamano, decision: 'uno', agregada: true });
     if (!items[0]) {
       await whatsappService.sendMessage(to, `No tengo la pizza *${p.sabor}* de ${p.tamano} porciones 😔. Escribe *asesor* y una persona te ayuda.`);
       return;
@@ -1530,6 +1682,7 @@ class MessageHandler {
   async iniciarCombo(to, { tamano = null, sabores = [], ambiguos = [], porciones = {}, nSabores = null, borde = null, cantidad = 1, origen = 'texto', linea = null } = {}) {
     const s = sesion(to);
     s.pizza1 = null;
+    if (origen === 'texto') this.notarPizza(to, { sabor: sabores[0], tamano, decision: 'combinar' });
     s.combo = { paso: null, tamano, sabores: [...sabores], ambiguos: [...ambiguos], porciones: { ...porciones }, nSabores, borde: borde ?? { pide: false, tipo: null }, cantidad: cantidad || 1, origen, linea, at: Date.now() };
     return this.comboSiguientePaso(to);
   }
@@ -1673,6 +1826,7 @@ class MessageHandler {
       if (c.origen === 'carrito') { await this.comboSeguirCarrito(to); return true; }
       if (sabor) { await this.iniciarPizza1(to, { sabor, tamano, borde, cantidad: c.cantidad }); return true; }
       s.pizzaBorrador = { sabor: null, tamano, borde, cantidad: c.cantidad, unSolo: true, at: Date.now() };
+      this.notarPizza(to, { tamano, decision: 'uno' });
       await this.mostrarCartaPizzas(to, { tamano, conBebidas: false });
       await whatsappService.sendMessage(to, 'Dime el sabor y te la agrego al pedido 🍕');
       return true;
@@ -1766,6 +1920,7 @@ class MessageHandler {
     if (!c?.item) return;
     s.combo = null;
     s.pizzaBorrador = null;
+    this.notarPizza(to, { sabor: c.sabores[0], tamano: c.tamano, decision: 'combinar', agregada: true });
     const extra = c.itemBorde ? [c.itemBorde] : [];
     if (c.origen === 'carrito' && Number.isInteger(c.linea) && s.productos?.[c.linea]) {
       // Reemplaza la línea del carrito (o la parte que se combina) y sigue con las demás pizzas.
@@ -1806,6 +1961,8 @@ class MessageHandler {
   /** Líneas del pedido que son pizzas de un solo sabor y aún no se les preguntó. */
   pizzasSinPreguntar(to) {
     const s = sesion(to);
+    // v3.9: si ya dijo hoy que esa pizza es de un solo sabor, no se le pregunta otra vez.
+    for (const p of s.productos ?? []) if (esPizza(p.product_retailer_id) && !p.combinada && !p.comboPreguntado && this.yaDecidioUnSolo(to, p.product_retailer_id)) p.comboPreguntado = true;
     return (s.productos ?? []).map((p, i) => (esPizza(p.product_retailer_id) && !p.combinada && !p.comboPreguntado ? i : -1)).filter((i) => i >= 0);
   }
 
@@ -1830,7 +1987,15 @@ class MessageHandler {
     const i = s.comboLinea;
     const p = Number.isInteger(i) ? s.productos?.[i] : null;
     if (!p) return this.comboSeguirCarrito(to);
-    if (!combinar) { p.comboPreguntado = true; return this.comboSeguirCarrito(to); }
+    if (!combinar) {
+      p.comboPreguntado = true;
+      // v3.9: no se le vuelve a preguntar por esta pizza en el turno (aunque reenvíe el carrito).
+      const d = datosDe(to);
+      recordar(to, { pizzasOk: [...new Set([...(d.pizzasOk ?? []), String(p.product_retailer_id)])] });
+      const info = PIZZA_POR_ID.get(String(p.product_retailer_id));
+      this.notarPizza(to, { sabor: info?.sabor, tamano: info?.tamano, decision: 'uno', agregada: true });
+      return this.comboSeguirCarrito(to);
+    }
     const { sabor, tamano } = PIZZA_POR_ID.get(String(p.product_retailer_id));
     if ((Number(p.quantity) || 1) > 1) {
       s.comboCantidad = { tamano, sabor, linea: i };
