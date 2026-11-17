@@ -66,3 +66,37 @@ Cómo se dispara (`src/services/pizzasCombinadas.js` + sección "Pizzas combinad
   (Toxi-Queso de 12 no tiene precio) y más sabores de los permitidos se avisan y se corrigen.
 - Resumen con botones *Agregar al pedido / Cambiar sabores / Cancelar*; "cancelar" por texto también.
 - Preguntas de detalle ("¿la hawaiana tiene piña?") siguen yendo a la IA con las tarjetas debajo.
+
+## v3.8 · Pizzas: menos pasos y jerarquía de mensajes
+
+**Jerarquía** de lo que escribe el cliente (de mayor a menor):
+1. Palabras clave: *carta*, *menú*, *asesor*, *ubicación*, *ayuda*, *reservar*, *cancelar*. Mandan siempre, aunque esté
+   armando una pizza. "La carta" muestra la carta principal y suelta la pizza a medio armar; "carta de pizzas" o
+   "¿qué sabores hay?" muestra las pizzas y deja la combinación en espera.
+2. Si está armando una pizza, solo se toma lo que es de la pizza (sabores, tamaño, porciones por sabor, borde,
+   "un solo sabor", sí/no). Lo demás sigue al flujo normal (otro plato, pregunta a la IA). Ya no existe el mensaje
+   "No encontré ese sabor".
+3. Pizzas por texto.
+
+**Primera vez que habla de pizzas** ("quiero una pizza", "pizza de 12 porciones", "quiero una pizza mexicana"):
+solo se muestran las coincidencias (carta de pizzas, carta de ese tamaño o la tarjeta del sabor). No se pregunta nada.
+**Cuando ya las vio y escribe su preferencia** ("deseo una hawaiana por favor", "la mexicana de 8"): botones
+*Un solo sabor ✅ / Combinar sabores 🍕*. Un solo sabor → el bot la agrega al pedido (pregunta el tamaño con una lista
+si falta) y sigue "¿Está todo bien?". Si escribe que la quiere combinada ("mitad…", "2 sabores", dos sabores) se arma
+la combinada de una vez, también en el primer mensaje.
+
+**Combinada**
+- En 8 y 12 ya no se pregunta "¿2 o 3 sabores?": se deduce de los sabores que escriba (en el resumen de 2 sabores
+  puede escribir un tercero).
+- Los sabores que faltan se piden con un texto corto y un **carrusel de recomendaciones** (`RECOMENDADOS` en
+  pizzasCombinadas.js), sin los que ya eligió. El cliente escribe el sabor, o lo agrega al carrito desde el carrusel
+  y lo envía: se toma como el sabor que faltaba.
+- Porciones por sabor: "la de 4 que sea jamón y queso", "4 de jamón y queso, 2 hawaiana y 2 mexicana",
+  "mitad hawaiana". Un número antes de un sabor son porciones de ese sabor, no el tamaño de la pizza. Si el reparto
+  no existe ("6 y 2" en la de 8) se explican los permitidos.
+- "1 solo sabor hawaiana" / "sin combinar" mientras arma la combinada → pasa a pizza de un sabor y entra al pedido.
+- Si repite el único sabor que ya dio ("Hawaiana"… "Hawaiana") se le pregunta *Un solo sabor / Combinar*.
+
+**Bordes** (Queso, Bocadillo, Mozzarella): "con borde de queso" agrega `Borde Queso (N porciones)` del mismo tamaño,
+en la de un sabor y en la combinada. "Con borde" sin decir cuál → 3 botones con el precio. "Queso" y "bocadillo" del
+borde ya no se confunden con sabores de pizza.

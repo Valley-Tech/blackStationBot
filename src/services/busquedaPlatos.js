@@ -292,13 +292,13 @@ function textoCuerpo(tarjetas, texto) {
   return `${intro}\n\n${pasos}\nCuando tengas todo, envía el carrito y te confirmo el pedido 😊`;
 }
 
-export async function enviarTarjetas(to, tarjetas, texto = '') {
+export async function enviarTarjetas(to, tarjetas, texto = '', { cuerpo = null } = {}) {
   if (!tarjetas.length) return false;
   if (!config.CATALOG_ID) {
     console.error('[platos] CATALOG_ID vacío: no se pueden enviar tarjetas de productos.');
     return false;
   }
-  const body = textoCuerpo(tarjetas, texto);
+  const body = cuerpo ?? textoCuerpo(tarjetas, texto); // v3.8: texto propio (recomendaciones de sabores de pizza)
   try {
     if (tarjetas.length === 1) {
       await enviar(to, {
