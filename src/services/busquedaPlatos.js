@@ -284,12 +284,12 @@ export async function buscarPlatos(to, texto) {
 const enviar = (to, interactive) => sendToWhatsApp({ messaging_product: 'whatsapp', recipient_type: 'individual', to, type: 'interactive', interactive });
 
 function textoCuerpo(tarjetas, texto) {
+  // v3.9.1: mensaje corto. La cantidad solo aparece si el cliente pidió más de una ("3 hamburguesas").
   const cantidad = cantidadPedida(texto);
-  const variantes = tarjetas.some((t) => t.conVariantes);
   const n = tarjetas.length;
-  const intro = n === 1 ? '¡Aquí la tienes! 👇' : `Encontré ${n} opciones para ti 👇${n > 2 ? '\nDesliza ➡️ para verlas todas.' : ''}`;
-  const pasos = `Toca *Ver*${variantes ? ', elige el tipo o el tamaño' : ''} y agrégala al carrito 🛒${cantidad && cantidad > 1 ? ` (pon la cantidad: *${cantidad}*)` : ''}.`;
-  return `${intro}\n\n${pasos}\nCuando tengas todo, envía el carrito y te confirmo el pedido 😊`;
+  const intro = n === 1 ? '¡Aquí la tienes! 👇' : `Encontré ${n} opciones para ti 👇`;
+  const pasos = `Toca *Ver*, elige y agrega al carrito 🛒${cantidad && cantidad > 1 ? ` (pon la cantidad: *${cantidad}*)` : ''}`;
+  return `${intro}\n\n${pasos}`;
 }
 
 export async function enviarTarjetas(to, tarjetas, texto = '', { cuerpo = null } = {}) {
