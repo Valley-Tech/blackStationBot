@@ -376,7 +376,7 @@ class MessageHandler {
         title: 'La Estación Parrilla',
         rows: [
           { id: 'cat:parrilla_asados', title: 'Asados y Picadas 🔥'},
-          { id: 'cat:parrilla_rapidas', title: 'Salchipapas-Hamburguesas'},
+          { id: 'cat:parrilla_rapidas', title: 'Salchipapas y Burgers'},
           { id: 'cat:parrilla_patacones', title: 'Patacones y Sándwiches'},
         ],
       },
