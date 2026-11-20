@@ -87,6 +87,10 @@ export default {
   // v3.9: abrir el Flow de pedido con los datos que el cliente ya dio (pago, recoger/domicilio, nombre, teléfono).
   // Actívalo SOLO después de publicar el Flow con "init-values" (docs/FLOW-PEDIDO-PRECARGADO.json).
   FLOW_PRECARGA: /^(1|true|si|yes)$/i.test(process.env.FLOW_PRECARGA || 'false'),
+  // v3.10: la IA recibe la fecha y hora de Colombia y si el restaurante está abierto o cerrado.
+  HORA_EN_IA: !/^(0|false|no)$/i.test(process.env.HORA_EN_IA || 'true'),
+  // v3.10: menú en la página web (solo se envía si el cliente lo pide: "el menú en la página web").
+  MENU_WEB_URL: process.env.MENU_WEB_URL || 'https://blacksstation.github.io/menu.html',
   // v3.5 · seguimiento del pedido sin terminar y adicionales
   RECORDATORIO_PEDIDO_MIN: Number(process.env.RECORDATORIO_PEDIDO_MIN) || 5, // cada cuántos minutos se recuerda
   RECORDATORIO_PEDIDO_MAX: Number(process.env.RECORDATORIO_PEDIDO_MAX ?? 2),  // cuántas veces como máximo (0 = nunca)

@@ -94,6 +94,16 @@ export function tieneFoto(id) {
   return revisadas.get(url)?.ok !== false;
 }
 
+/**
+ * v3.10: ¿el producto tiene foto válida en el CSV del catálogo? (aunque SOLO_CON_FOTO esté apagado).
+ * La usa "el menú de las hamburguesas": carrusel si todas tienen foto; si no, la lista de productos.
+ */
+export function fotoEnCatalogo(id) {
+  if (!cargado) return true;
+  const url = fotoPorId.get(String(id));
+  return enlaceValido(url) && revisadas.get(url)?.ok !== false;
+}
+
 /** Revisa en internet (si hace falta) las fotos de estos productos antes de armar las tarjetas. */
 export async function asegurarFotos(ids) {
   if (!activo() || !config.VERIFICAR_FOTOS) return;

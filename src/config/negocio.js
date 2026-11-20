@@ -36,10 +36,11 @@ export default {
   },
 
   // Cartas en PDF (súbelas a S3 o a cualquier URL pública). Si la URL está vacía, no se envía.
+  // v3.10: "la carta de las pizzas" → solo la de id 'pizzeria' (ver services/menuYCartas.js).
   cartas: [
-    { url: process.env.CARTA_PARRILLA_URL || '', filename: 'Carta-La-Estacion-Parrilla.pdf', caption: '🔥 Carta La Estación Parrilla Bar' },
-    { url: process.env.CARTA_PIZZERIA_URL || '', filename: 'Carta-Blacks-Pizza.pdf', caption: "🍕 Carta Black's Pizza" },
-    { url: process.env.CARTA_HELADERIA_URL || '', filename: 'Carta-Heladeria-Yellow.pdf', caption: '🍨 Carta Heladería Yellow' },
+    { id: 'parrilla', url: process.env.CARTA_PARRILLA_URL || '', filename: 'Carta-La-Estacion-Parrilla.pdf', caption: '🔥 Carta La Estación Parrilla Bar' },
+    { id: 'pizzeria', url: process.env.CARTA_PIZZERIA_URL || '', filename: 'Carta-Blacks-Pizza.pdf', caption: "🍕 Carta Black's Pizza" },
+    { id: 'heladeria', url: process.env.CARTA_HELADERIA_URL || '', filename: 'Carta-Heladeria-Yellow.pdf', caption: '🍨 Carta Heladería Yellow' },
   ],
 
   // Imágenes del encabezado de las plantillas de aviso (URL pública).

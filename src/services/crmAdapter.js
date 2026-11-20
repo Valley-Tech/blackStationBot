@@ -118,7 +118,12 @@ export async function askAi(to, text, { history = null } = {}) {
   try {
     // v3.9: con `history` (memoria del turno del bot) el CRM no usa su propio historial.
     const body = { to, text, phoneNumberId: CRM_PHONE_NUMBER_ID };
-    if (Array.isArray(history) && history.length) body.history = history.slice(-40).map((h) => ({ role: h.role, text: String(h.text).slice(0, 4000) }));
+    if (Array.isArray(history) && history.length) {
+      body.history = history.slice(-40).map((h) => ({ role: h.role, text: String(h.text).slice(0, 4000) }));
+      // v3.10: el CRM recorta el historial a `historyLimit` (20 por defecto) y se perdía la nota del
+      // principio (datos del cliente). Se le pide que use todo lo que manda el bot (máx. 40).
+      body.historyLimit = body.history.length;
+    }
     const { data } = await crm.post('/ai/reply', body, { timeout: 45000 });
     return data?.text ?? null;
   } catch (error) {

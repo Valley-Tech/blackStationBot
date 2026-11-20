@@ -19,6 +19,9 @@ import negocio from '../config/negocio.js';
 import { memoria, datosDe, recordar, olvidar, usarNombres, turnoDeMemoria } from './memoria.js';
 import { datosEnTexto, telefonoLocal, PAGOS } from './datosCliente.js';
 import { tamanoEnTexto } from './pizzasCombinadas.js';
+import { pideCarta, pideMenu, pideWeb, cartasPdfPedidas, temaDelMenu, temaPizza, temaParrilla } from './menuYCartas.js';
+import { esPreguntaDeServicio, respuestaServicio } from './horaColombia.js';
+import { fotoEnCatalogo } from './fotosCatalogo.js';
 
 // v3.9: la memoria muestra los productos por su nombre ("[Bot mostró el producto: Pizza Hawaiana (8 porciones)]").
 usarNombres((id) => nombrePorId[id] ?? id);
@@ -123,6 +126,18 @@ class MessageHandler {
           await this.recibirComprobante(message);
         }
       } else {
+        // v3.10: fuera de horario también: "¿hay servicio?" con la hora real, y "menú" / "carta".
+        if (message?.type === 'text') {
+          const texto = String(message.text?.body ?? '').trim();
+          const resto = separarSaludo(texto).resto || texto;
+          if (esPreguntaDeServicio(resto)) {
+            sesion(from).avisoCerradoAt = Date.now();
+            await whatsappService.sendMessage(from, respuestaServicio(), message.id);
+            await whatsappService.markAsRead(message.id);
+            return;
+          }
+          if (await this.atenderMenuOCarta(from, resto)) { await whatsappService.markAsRead(message.id); return; }
+        }
         // Pedido de las últimas 3 h ("¿se demora?" después del cierre): lo atiende la IA, no el aviso de horario.
         const pedido = obtenerSesion(from)?.pedido;
         if (message?.type === 'text' && pedido?.enviadoAt && Date.now() - pedido.enviadoAt < 3 * 3600 * 1000) {
@@ -509,7 +524,7 @@ class MessageHandler {
     return await whatsappService.sendFlowEncuesta(to, action);
   }
 
-  /** "menu": plantilla con botón de catálogo si existe; si no, el menú de cartas. */
+  /** "menu": plantilla con botón de catálogo si existe; si no (o si Meta la rechaza), el menú de cartas. */
   async catalogo(to) {
     if (!config.CATALOG_TEMPLATE) return this.menuCartas(to);
     const template = {
@@ -524,7 +539,63 @@ class MessageHandler {
         }
       ]
     };
-    await whatsappService.sendCatalogo(to, template);
+    const enviado = await whatsappService.sendCatalogo(to, template);
+    if (!enviado) return this.menuCartas(to); // v3.10: plantilla rechazada → lista de cartas
+    return enviado;
+  }
+
+  /**
+   * v3.10 · "menú" y "carta" (ver services/menuYCartas.js). Devuelve true si lo atendió.
+   *   carta → PDF de la carta que nombró (o las 3); sin PDF configurado → lo de antes.
+   *   menú de un tema → pizzas: carta de pizzas; un plato ("hamburguesas"): carrusel solo de ese
+   *     plato (si alguno no tiene foto, la lista de productos de su carta); una carta ("bebidas").
+   *   menú sin tema → catálogo de WhatsApp (CATALOG_TEMPLATE) → lista de cartas.
+   *   "en la página web", "menú digital", "el link" → enlace MENU_WEB_URL.
+   */
+  async atenderMenuOCarta(from, t) {
+    const carta = pideCarta(t);
+    if (!carta && !pideMenu(t)) return false;
+    const s = sesion(from);
+    const tema = temaDelMenu(t);
+    const dePizzas = carta ? cartasPdfPedidas(t).join() === 'pizzeria' : temaPizza(tema);
+    // La pizza que estaba armando: si pide las pizzas queda en espera; si pide otra cosa, se suelta.
+    if (!dePizzas) { if (s.combo?.origen !== 'carrito') s.combo = null; s.pizza1 = null; }
+    const avisoCombo = async () => {
+      if (dePizzas && s.combo) await whatsappService.sendMessage(from, 'Cuando elijas, escríbeme los sabores para tu pizza combinada 🍕 (o *cancelar* si la prefieres de un solo sabor).');
+    };
+    const cartaPizzas = async () => { await this.mostrarCartaPizzas(from, { tamano: tamanoEnTexto(t), conBebidas: !s.combo && !s.pizza1 }); await avisoCombo(); return true; };
+
+    if (pideWeb(t) && config.MENU_WEB_URL) {
+      await whatsappService.sendMessage(from, `Aquí tienes nuestro menú en la página web 👇\n${config.MENU_WEB_URL}`);
+      return true;
+    }
+    if (carta) {
+      if (await this.enviarCartasPdf(from, cartasPdfPedidas(t))) { await avisoCombo(); return true; }
+      if (dePizzas) return cartaPizzas();          // sin el PDF de la pizzería: la carta de pizzas del catálogo
+      await this.menuCartas(from);
+      return true;
+    }
+    // "menú …"
+    if (dePizzas) return cartaPizzas();
+    if (tema && hablaDePlatos(tema)) {
+      const { tarjetas } = await buscarPlatos(from, tema);
+      const conFoto = tarjetas.length > 0 && tarjetas.every((x) => fotoEnCatalogo(x.id));
+      if (conFoto && tarjetas.length <= 10) { await enviarTarjetas(from, tarjetas, tema); return true; }
+    }
+    const key = tema ? this.cartaPorTexto(tema) : null;
+    if (key) { await this.handleMenuOption(from, `cat:${key}`); return true; }
+    if (temaParrilla(tema)) { await this.menuCartas(from); return true; }
+    await this.catalogo(from);
+    return true;
+  }
+
+  /** v3.10: cartas en PDF por id ('parrilla' | 'pizzeria' | 'heladeria'; [] = todas). false si no hay URL. */
+  async enviarCartasPdf(to, ids = []) {
+    const cartas = negocio.cartas.filter((c) => c.url && (!ids.length || ids.includes(c.id)));
+    if (!cartas.length) return false;
+    await whatsappService.sendMessage(to, cartas.length > 1 ? 'Espera que carguen las cartas... 📄' : 'Espera que cargue la carta... 📄');
+    for (const c of cartas) await whatsappService.sendMediaMessage(to, 'document', c.url, c.caption, c.filename);
+    return true;
   }
 
   async handleMenuOption(to, option) {
@@ -820,12 +891,7 @@ class MessageHandler {
 
   /** Cartas en PDF (las que tengan URL configurada); si no hay ninguna, el menú de cartas. */
   async sendMedia(to) {
-    const cartas = negocio.cartas.filter((c) => c.url);
-    if (!cartas.length) return this.menuCartas(to);
-    await whatsappService.sendMessage(to, "Espera que cargue la carta... 📄");
-    for (const c of cartas) {
-      await whatsappService.sendMediaMessage(to, 'document', c.url, c.caption, c.filename);
-    }
+    if (!(await this.enviarCartasPdf(to, []))) return this.menuCartas(to);
   }
 
   async sendMediaQR(to) {
@@ -1045,19 +1111,15 @@ class MessageHandler {
 
     // JERARQUÍA 1 · Palabras clave: mandan siempre, aunque esté armando una pizza.
     if (lower === 'ayuda') return this.helpMenu(from);
-    const dicePizza = /\bpi(z|s|zz)+as?\b/.test(normalizar(t));
-    const pideCarta = lower.includes('carta') || (/\bmen[uú]\b/.test(lower) && (dicePizza || !hablaDePlatos(t)));
-    if (pideCarta && dicePizza) {
-      // "quiero la carta de las pizzas": solo las pizzas. La combinación (si había) queda en espera.
-      await this.mostrarCartaPizzas(from, { tamano: null, conBebidas: !s.combo && !s.pizza1 });
-      if (s.combo) await whatsappService.sendMessage(from, 'Cuando elijas, escríbeme los sabores para tu pizza combinada 🍕 (o *cancelar* si la prefieres de un solo sabor).');
+    // v3.10: "carta" → la carta en PDF que nombró; "menú" → catálogo, carta del tema o la página web.
+    // (Antes "menú" con tilde no se reconocía —/\bmen[uú]\b/ no ve el final de la palabra después de la "ú"—
+    // y "Regálame el menú xf completo" terminaba en la IA, que mandaba el enlace de la página.)
+    if (await this.atenderMenuOCarta(from, t)) return;
+    // v3.10: "¿hay servicio?", "¿están abiertos?", "¿a qué hora cierran?" → con la hora real de Colombia.
+    if (esPreguntaDeServicio(t)) {
+      await whatsappService.sendMessage(from, respuestaServicio());
+      if (this.pedidoPendiente(from)) await this.recordarPedido(from);
       return;
-    }
-    if (pideCarta) {
-      // "la carta", "quiero ver el menú": la carta principal. Se suelta la pizza que estaba armando.
-      if (s.combo?.origen !== 'carrito') s.combo = null;
-      s.pizza1 = null;
-      return lower.includes('carta') ? this.sendMedia(from) : this.catalogo(from);
     }
     if (lower === 'ubicacion' || lower === 'ubicación') return this.sendLocation(from);
     if (lower === 'asesor') return this.sendContact(from);

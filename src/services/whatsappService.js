@@ -200,9 +200,10 @@ class WhatsAppService {
         template: template
       };
   
-    await sendToWhatsApp(data);
+    return await sendToWhatsApp(data); // v3.10: el resultado avisa si Meta rechazó la plantilla
     } catch (error) {
       console.error("Error: ", error);
+      return null;
     }
   }
   

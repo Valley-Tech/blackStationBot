@@ -1,5 +1,7 @@
 import { askAi } from './crmAdapter.js';
 import { historialParaIA } from './memoria.js';
+import { notaFechaHora } from './horaColombia.js';
+import config from '../config/env.js';
 
 /**
  * IA del chatbot — misma lógica que Mishabella (v2.12).
@@ -29,6 +31,18 @@ export const AI_UNAVAILABLE = 'Por ahora no puedo responder preguntas libres �
  *                          ubicar la conversación ni su historial.
  * @returns {Promise<string|null>} Respuesta lista para WhatsApp, o null.
  */
+/**
+ * v3.10: historial para la IA + al final una nota con la FECHA y HORA de Colombia y si estamos
+ * abiertos o cerrados (la IA no sabe qué hora es: a las 11:52 p. m. decía "¡Sí, hay servicio!").
+ * Va de último, justo antes del mensaje del cliente, para que la IA la tenga presente.
+ * HORA_EN_IA=false la quita.
+ */
+export function historialConHora(to, text) {
+  const history = historialParaIA(to, text) ?? [];
+  if (!config.HORA_EN_IA) return history.length ? history : null;
+  return [...history.slice(-38), { role: 'user', text: notaFechaHora() }, { role: 'model', text: 'Entendido.' }];
+}
+
 const geminiService = async (message, to) => {
   const text = String(message ?? '').trim();
   if (!text) return null;
@@ -39,7 +53,7 @@ const geminiService = async (message, to) => {
   try {
     // v3.9: la IA recibe la memoria del turno (lo que se habló hoy, tarjetas y botones incluidos,
     // y los datos que el cliente ya dio). Sin memoria, el CRM usa su historial de siempre.
-    return await askAi(to, text, { history: historialParaIA(to, text) });
+    return await askAi(to, text, { history: historialConHora(to, text) });
   } catch (error) {
     console.error('[ia] error pidiendo la respuesta al CRM:', error.message);
     return null;
